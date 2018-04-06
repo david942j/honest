@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+#
+# Usage: honest [-h/--help] [-v/--version] <path-to-source-code> [--commit|--branch|--tag|--latest] <package>
+#        honest --version
+#        honest github://pypa/setuptools --tag v39.0.1 pip:setuptools-39.0.1
+#        honest github://david942j/one_gadget --latest gem:one_gadget
+#        honest ~/path_on_my_laptop/bower npm:bower-1.8.4
+
+set -E
+# -------- Basic functions --------
+version() {
+  echo "Honest Version 0.0.0"
+}
+
+usage() {
+  version
+  sed -ne '/^#/!q;s/.\{1,2\}//;1,2d;p' < "$0"
+  [ -z "$1" ] || exit "$1"
+}
+
+die() {
+  local script_name=`basename "$BASH_SOURCE"`
+  echo "$script_name: $1"
+  exit 2
+}
+
+resolve_link() {
+  $(type -p greadlink readlink | head -1) "$1"
+}
+
+abs_dirname() {
+  local cwd="$(pwd)"
+  local path="$1"
+
+  while [ -n "$path" ]; do
+    cd "${path%/*}"
+    local name="${path##*/}"
+    path="$(resolve_link "$name" || true)"
+  done
+
+  pwd
+  cd "$cwd"
+}
+
+HONEST_LIBEXEC="$(abs_dirname "$0")"
+export HONEST_PREFIX="$(abs_dirname "$HONEST_LIBEXEC")"
+export HONEST_CWD="$(abs_dirname .)"
+export PATH="$HONEST_LIBEXEC:$PATH"
+
+# -------- Option Parsing --------
+parse_options() {
+  getopt --test > /dev/null
+  if [[ $? -ne 4 ]]; then
+    echo "getopt unavailable."
+    exit 2
+  fi
+  local OPTIONS=hv
+  local LONGOPTIONS=help,version,commit:,branch:,tag:,latest
+  PARSED_OPTIONS=$(getopt --options=$OPTIONS --longoptions=$LONGOPTIONS --name "$0" -- "$@")
+  if [[ $? -ne 0 ]]; then
+    exit 2
+  fi
+}
+
+if [[ $# -eq 0 ]]; then
+  usage 1
+fi
+
+parse_options "$@"
+eval set -- "$PARSED_OPTIONS"
+unset REPO_COMMIT
+unset REPO_TAG
+unset REPO_LATEST
+
+while true; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -v|--version)
+      version
+      exit 0
+      ;;
+    --commit)
+      REPO_COMMIT="$2"
+      shift 2
+      ;;
+    --tag)
+      REPO_TAG="$2"
+      shift 2
+      ;;
+    --latest)
+      REPO_LATEST=1
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      echo "Hey you forget to handle '$1'!"
+      exit 3
+      ;;
+  esac
+done
+
+if [[ $# -gt 2 ]]; then
+  usage
+  die "Wrong number of arguments (given $#, expected 2)"
+elif [[ $# -ne 2 ]]; then
+  usage
+  die "You must give both <path-to-source-code> and <package>!"
+fi
+
+# -------- Download Sources --------
+
+clone_repo() {
+  REPO_PATH="$1"
+}
+
+download_package() {
+  PACKAGE_PATH="$1"
+}
+
+clone_repo "$1"
+download_package "$2"
+
+honest-diff "$REPO_PATH" "$PACKAGE_PATH"
+unset REPO_PATH
+unset PACKAGE_PATH
