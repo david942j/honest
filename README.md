@@ -1,14 +1,5 @@
-```
-██╗  ██╗ ██████╗ ███╗   ██╗███████╗███████╗████████╗
-██║  ██║██╔═══██╗████╗  ██║██╔════╝██╔════╝╚══██╔══╝
-███████║██║   ██║██╔██╗ ██║█████╗  ███████╗   ██║   
-██╔══██║██║   ██║██║╚██╗██║██╔══╝  ╚════██║   ██║   
-██║  ██║╚██████╔╝██║ ╚████║███████╗███████║   ██║   
-╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝╚══════╝   ╚═╝   
-                                                    
-```
-
-# Honest
+# Honest: Are your installed packages honest?
+[![Build Status](https://travis-ci.org/david942j/honest.svg?branch=master)](https://travis-ci.org/david942j/honest)
 
 Are your installed packages _really_ the same as you saw on GitHub?
 
@@ -18,10 +9,12 @@ Verify the source code before you installed it!
 
 All open-source projects can be reviewed on GitHub, BitBucket, GitLab, etc.
 
-But are you sure those packages published to pypi/npm/gem *exactly* same as they are in git-repositories?
+But are you sure those packages published to pip/npm/gem *exactly* same as they are in git-repositories?
 
 Imagine this:
-What if a developer hide an one-line backdoor in a millions-downloads package?
+It looks all good, secure, many-users on GitHub, but who has checked *the packge pushed* to PyPI?
+What if the developer hide an one-line backdoor in source-code before pushing it?
+Once you installed it, you got owned!
 
 Let's find out whether the packages you installed are **Honest**!
 
