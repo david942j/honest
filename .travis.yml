@@ -1,0 +1,11 @@
+sudo: false
+os:
+  - linux
+branches:
+  only:
+    - master
+
+before_install:
+  - sudo apt-get install ruby python --force-yes
+install: git clone --depth 1 https://github.com/sstephenson/bats.git
+script: PATH="./bats/bin:$PATH" script/test

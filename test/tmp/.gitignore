@@ -1,0 +1,3 @@
+# Ensure test/tmp directory exists
+*
+!.gitignore

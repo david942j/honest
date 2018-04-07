@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+#
+# Usage: honest-clone <vendor>://<author>/<repo> --commit= --tag= --latest=
+set -e
+
+die() {
+  local script_name=`basename "$0"`
+  echo "$script_name: $1"
+  exit 1
+}
+
+usage() {
+  sed -ne '/^#/!q;s/.\{1,2\}//;1,2d;p' < "$0"
+  [ -z "$1" ] || exit "$1"
+}
+
+check_start_with() {
+  if [[ "$1" != "$2"* ]]; then
+    die "Error: expected \"$1\" to start with \"$2\""
+  fi
+  local str="$1"
+  RESULT="${str:${#2}}"
+}
+
+tmp_dir() {
+  # We have to os-independent
+  # The behavior is a little different betwen Linux and macOS, but it's okay.
+  RESULT="$(TMPDIR=$HONEST_TMPDIR mktemp -d -t honest-XXXXXXXXXX)"
+}
+
+if [[ $# -ne 4 ]]; then
+  usage 1
+fi
+
+# Only supports github now
+check_start_with "$1" "github://"; repo="https://github.com/$RESULT"
+# At most one of these should present
+check_start_with "$2" "--commit="; commit=$RESULT
+check_start_with "$3" "--tag="; tag=$RESULT
+check_start_with "$4" "--latest="; latest=$RESULT
+tmp_dir; path=$RESULT
+cd $path
+
+go_git() {
+  git init
+  git remote add origin "$repo"
+  # Only supports tag now
+  git fetch origin "refs/tags/$tag"
+  git checkout FETCH_HEAD
+}
+go_git 1>/dev/null
+echo $path
