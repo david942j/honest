@@ -21,7 +21,8 @@ script=clone.bats
 
 @test "$script: fetch tag" {
   run honest-clone github://david942j/honest --commit= --tag=tag_for_test --latest=
-  result="${lines[-1]}"
+  # bash on macOS too old, doesn't support ary[-1]
+  result="${lines[${#lines[@]}-1]}"
   [ "$status" -eq 0 ]
   [ -f "$result/this_file_exists_in_this_commit_only" ]
 }

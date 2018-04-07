@@ -23,7 +23,6 @@ check_start_with() {
 }
 
 tmp_dir() {
-  # We have to os-independent
   # The behavior is a little different betwen Linux and macOS, but it's okay.
   RESULT="$(TMPDIR=$HONEST_TMPDIR mktemp -d -t honest-XXXXXXXXXX)"
 }
