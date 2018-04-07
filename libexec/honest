@@ -1,10 +1,31 @@
 #!/usr/bin/env bash
 #
-# Usage: honest [-h/--help] [-v/--version] <path-to-source-code> [--commit|--branch|--tag|--latest] <package>
+# Usage: honest [-h/--help] [-V/--version]
+#               <path-to-source-code> [--commit=|--latest|--tag=]
+#               <package> [-v=]
+# Examples:
 #        honest --version
-#        honest github://pypa/setuptools --tag v39.0.1 pip:setuptools-39.0.1
+#        honest github://pypa/setuptools --tag v39.0.1 pip:setuptools -v 39.0.1
 #        honest github://david942j/one_gadget --latest gem:one_gadget
 #        honest ~/path_on_my_laptop/bower npm:bower-1.8.4
+#
+# Options:
+#        -h, --help
+#               Show this usage.
+#        -V, --version
+#               Display version information and exit.
+#
+# Source Code Parameter:
+#        <path-to-source-code> can either be:
+#               - A relative/absolute path.
+#               - In form of 'github://<author>/<repo>'.
+# Source Code Options:
+#        --commit commit_hash
+#               Specify commit to fetch, useful for repository that doesn't drop releases.
+#        --latest
+#               Fetch the latest release, i.e. https://REPO_ROOT/releases/latest.
+#        --tag tag_name
+#               Specify the tag name to fetch, tag names are listed at https://REPO_ROOT/tags.
 
 set -E
 # -------- Basic functions --------
@@ -55,7 +76,7 @@ parse_options() {
     exit 2
   fi
   local OPTIONS=hv
-  local LONGOPTIONS=help,version,commit:,branch:,tag:,latest
+  local LONGOPTIONS=help,version,commit:,tag:,latest
   PARSED_OPTIONS=$(getopt --options=$OPTIONS --longoptions=$LONGOPTIONS --name "$0" -- "$@")
   if [[ $? -ne 0 ]]; then
     exit 2
@@ -107,7 +128,7 @@ done
 
 if [[ $# -gt 2 ]]; then
   usage
-  die "Wrong number of arguments (given $#, expected 2)"
+  die "Too many arguments (given $#, expected 2)"
 elif [[ $# -ne 2 ]]; then
   usage
   die "You must give both <path-to-source-code> and <package>!"
@@ -115,15 +136,19 @@ fi
 
 # -------- Download Sources --------
 
-clone_repo() {
-  REPO_PATH="$1"
+fetch_repo() {
+  if [[ $1 == github://* ]]; then
+    REPO_PATH="$(honest-clone "$1" --commit=$REPO_COMMIT --tag=$REPO_TAG --latest=$REPO_LATEST)"
+  else
+    REPO_PATH=$1
+  fi
 }
 
 download_package() {
   PACKAGE_PATH="$1"
 }
 
-clone_repo "$1"
+fetch_repo "$1"
 download_package "$2"
 
 honest-diff "$REPO_PATH" "$PACKAGE_PATH"

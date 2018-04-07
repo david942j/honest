@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -e
+
+STATUS=0
+bats ${CI:+--tap} test || STATUS="$?"
+
+exit "$STATUS"

@@ -1,0 +1,3 @@
+export HONEST_TMPDIR="$BATS_TEST_DIRNAME/tmp"
+HONEST_ROOT="$(dirname "$BATS_TEST_DIRNAME")"
+export PATH="$HONEST_ROOT/bin:$HONEST_ROOT/libexec:$PATH"
