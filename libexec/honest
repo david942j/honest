@@ -6,7 +6,6 @@
 # Examples:
 #        honest --version
 #        honest github://pypa/setuptools --tag v39.0.1 pip:setuptools -v 39.0.1
-#        honest github://pypa/setuptools --commit 76f1da96edb pip:setuptools-39.0.1
 #        honest github://david942j/one_gadget --latest gem:one_gadget
 #        honest ~/path_on_my_laptop/bower npm:bower-1.8.4
 #
@@ -26,7 +25,7 @@
 #        --latest
 #               Fetch the latest release, i.e. https://REPO_ROOT/releases/latest.
 #        --tag tag_name
-#               Specify the tag name to fetch, tag names are listed at https://REPO_ROOT/releases.
+#               Specify the tag name to fetch, tag names are listed at https://REPO_ROOT/tags.
 
 set -E
 # -------- Basic functions --------

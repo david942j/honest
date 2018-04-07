@@ -32,10 +32,13 @@ WIP
 ## Usage
 
 ```bash
-$ honest --help
-# Usage: honest [-h/--help] [-v/--version] <path-to-source-code> [--commit|--branch|--tag|--latest] <package>
+$ honest
+# Usage: honest [-h/--help] [-V/--version]
+#               <path-to-source-code> [--commit=|--latest|--tag=]
+#               <package> [-v=]
+# Examples:
 #        honest --version
-#        honest github://pypa/setuptools --tag v39.0.1 pip:setuptools-39.0.1
+#        honest github://pypa/setuptools --tag v39.0.1 pip:setuptools -v 39.0.1
 #        honest github://david942j/one_gadget --latest gem:one_gadget
 #        honest ~/path_on_my_laptop/bower npm:bower-1.8.4
 ```
