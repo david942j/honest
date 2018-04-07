@@ -12,5 +12,5 @@ script=gem.bats
 @test "$script: one_gadget" {
   run honest-gem download one_gadget
   [ "$status" -eq 0 ]
-  [ -f "$output" ]
+  [ -f "$output/metadata" ]
 }

@@ -1,0 +1,16 @@
+---
+version: "2"
+plugins:
+  duplication:
+    enabled: true
+    exclude_paths:
+    - spec/
+checks:
+  file-lines:
+    enabled: false
+  method-count:
+    enabled: false
+  method-complexity:
+    enabled: false
+exclude_patterns:
+- spec/

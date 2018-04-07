@@ -34,7 +34,13 @@ download() {
   name="$RESULT.gem"
   tmp_dir; tmp="$RESULT"
   mv "$name" "$tmp/"
-  RESULT="$tmp/$name"
+  cd "$tmp"
+  tar xf "$name"
+  # TODO: check contains exactly three files
+  gunzip metadata.gz
+  mkdir data
+  tar xzf data.tar.gz -C data
+  RESULT="$tmp/"
 }
 
 if [[ "$1" == 'download' ]]; then
