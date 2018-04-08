@@ -1,5 +1,0 @@
-#!/usr/bin/env ruby
-
-require 'seccomp-tools/cli/cli'
-
-SeccompTools::CLI.work(ARGV)

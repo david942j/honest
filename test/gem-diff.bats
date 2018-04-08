@@ -13,15 +13,15 @@ gen_command() {
   [ "$output" = "Unhonest! Additional files in package: file.hack." ]
 }
 
-@test "$script: seccomp-tools" {
-  gen_command seccomp-tools-1.2.0.git seccomp-tools-1.2.0.gem
+@test "$script: gdb-ruby" {
+  gen_command gdb-ruby-0.3.0.git gdb-0.3.0.gem
   run $RESULT
   [ "$status" -eq 0 ]
 }
 
 @test "$script: backdoor inserted" {
-  gen_command seccomp-tools-1.2.0.git backdoor_inserted.gem
+  gen_command gdb-ruby-0.3.0.git backdoor_inserted.gem
   run $RESULT
   [ "$status" -eq 1 ]
-  [ "$output" = "Unhonest! Files different: lib/seccomp-tools.rb." ]
+  [ "$output" = "Unhonest! Files different: lib/gdb.rb." ]
 }

@@ -30,7 +30,7 @@ class Diff
 
   def check_metadata_files
     Dir.chdir(File.join(@pkg_path, 'data')) do
-      presented = Dir.glob('**/*').select { |f| File.file?(f) }
+      presented = Dir.glob('**/*', File::FNM_DOTMATCH).select { |f| File.file?(f) }
       additional = presented - @spec.files
       missing = @spec.files - presented
       unhonest("Additional files in package: #{additional.join(', ')}.") if additional.any?

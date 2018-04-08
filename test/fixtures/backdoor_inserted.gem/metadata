@@ -15,7 +15,7 @@ extensions: []
 extra_rdoc_files: []
 files:
 - README.md
-- lib/seccomp-tools.rb
+- lib/gdb.rb
 homepage: 
 licenses: []
 metadata: {}
