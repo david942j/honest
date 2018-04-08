@@ -20,6 +20,7 @@ script=clone.bats
 }
 
 @test "$script: fetch tag" {
+  [ -z "$CI"] && skip "cloning takes long time"
   run honest-clone github://david942j/honest --commit= --tag=tag_for_test --latest=
   # bash on macOS too old, doesn't support ary[-1]
   result="${lines[${#lines[@]}-1]}"

@@ -7,5 +7,7 @@ branches:
   only:
     - master
 
+before_install:
+  - ruby --version
 install: git clone --depth 1 https://github.com/sstephenson/bats.git
 script: PATH="./bats/bin:$PATH" script/test

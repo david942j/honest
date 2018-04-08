@@ -18,3 +18,10 @@ gen_command() {
   run $RESULT
   [ "$status" -eq 0 ]
 }
+
+@test "$script: backdoor inserted" {
+  gen_command seccomp-tools-1.2.0.git backdoor_inserted.gem
+  run $RESULT
+  [ "$status" -eq 1 ]
+  [ "$output" = "Unhonest! Files different: lib/seccomp-tools.rb." ]
+}
