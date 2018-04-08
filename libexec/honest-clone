@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 #
-# Usage: honest-clone <vendor>://<author>/<repo> --commit= --tag= --latest=
-set -e
+# Usage: honest-clone <git-url>
+
+# Git Url Parameter:
+#        <git-url> can be:
+#               - https://<git org>/<author>/<project>[@<branch|commit|tag>]
+#               - <github|bitbucket|gitlab>:<author>/<project>[@<branch|commit|tag>]
 
 die() {
   local script_name=`basename "$0"`
@@ -14,12 +18,40 @@ usage() {
   [ -z "$1" ] || exit "$1"
 }
 
-check_start_with() {
-  if [[ "$1" != "$2"* ]]; then
-    die "Error: expected \"$1\" to start with \"$2\""
-  fi
+is_start_with() {
+  [[ "$1" != "$2"* ]] && return 1
   local str="$1"
   RESULT="${str:${#2}}"
+}
+
+abbr_form() {
+  # check if url in form <vendor>:<author>/<project>[@..]
+  # if yes, convert it to https://<vendor's url>/<author>/<project>[@..]
+  local url="$1"
+  local vendor_map=("github" "github.com" "bitbucket" "bitbucket.org" "gitlab" "gitlab.com")
+  local n=${#vendor_map[@]}
+  for (( i=0; i<=$n; i+=2 )); do
+    is_start_with "$url" "${vendor_map[$i]}:"
+    if [[ $? -eq 0 ]]; then
+      RESULT="https://${vendor_map[$i+1]}/$RESULT"
+      return 0
+    fi
+  done
+  return 1
+}
+
+get_tag() {
+  # scan for first '@'
+  # therefore, we don't support urls like 'https://author@github.com/author/proj'
+  local url="$1"
+  local n=${#url}
+  for (( i=0; i<=$n; i++ )); do
+    if [[ ${url:$i:1} == '@' ]]; then
+      REPO=${url:0:$i}
+      TAG=${url:$i+1}
+    fi
+  done
+  return 0
 }
 
 tmp_dir() {
@@ -27,25 +59,23 @@ tmp_dir() {
   RESULT="$(TMPDIR=$HONEST_TMPDIR mktemp -d -t honest-XXXXXXXXXX)"
 }
 
-if [[ $# -ne 4 ]]; then
+if [[ $# -ne 1 ]]; then
   usage 1
 fi
 
-# Only supports github now
-check_start_with "$1" "github://"; repo="https://github.com/$RESULT"
-# At most one of these should present
-check_start_with "$2" "--commit="; commit=$RESULT
-check_start_with "$3" "--tag="; tag=$RESULT
-check_start_with "$4" "--latest="; latest=$RESULT
+REPO="$1"
+abbr_form "$1"
+[[ $? -eq 0 ]] && REPO=$RESULT
+get_tag "$REPO"
+
 tmp_dir; path=$RESULT
 cd $path
 
 go_git() {
-  git init
-  git remote add origin "$repo"
-  # Only supports tag now
-  git fetch origin "refs/tags/$tag"
-  git checkout FETCH_HEAD
+  set -e
+  git clone "$REPO" .
+  [[ "$TAG" ]] && git checkout "$TAG"
+  set +e
 }
 go_git 1>/dev/null
 echo $path

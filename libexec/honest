@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
 # Usage: honest [-h/--help] [-V/--version]
-#               <path-to-source-code> [--commit=|--latest|--tag=]
+#               <git-url>
 #               <package> [-v=]
 # Examples:
 #        honest --version
-#        honest github://pypa/setuptools --tag v39.0.1 pip:setuptools -v 39.0.1
-#        honest github://david942j/one_gadget --latest gem:one_gadget
-#        honest ~/path_on_my_laptop/bower npm:bower
+#        honest github:david942j/one_gadget@448e73dfcc60feb08cc71b843387e63a00791477 gem:one_gadget
+#        honest https://github.com/pypa/setuptools@v39.0.1 pip:setuptools -v 39.0.1
+#        honest ~/path_on_my_laptop/seccomp-tools gem:seccomp-tools -v 1.2.0
 #
 # Options:
 #        -h, --help
@@ -15,17 +15,11 @@
 #        -V, --version
 #               Display version information and exit.
 #
-# Source Code Parameter:
-#        <path-to-source-code> can either be:
+# Git Url Parameter:
+#        <git-url> can be:
 #               - A relative/absolute path.
-#               - In form of 'github://<author>/<repo>'.
-# Source Code Options:
-#        --commit commit_hash
-#               Specify commit to fetch, useful for repository that doesn't drop releases.
-#        --latest
-#               Fetch the latest release, i.e. https://REPO_ROOT/releases/latest.
-#        --tag tag_name
-#               Specify the tag name to fetch, tag names are listed at https://REPO_ROOT/tags.
+#               - https://<git org>/<author>/<project>[@<branch|commit|tag>]
+#               - <github|bitbucket|gitlab>:<author>/<project>[@<branch|commit|tag>]
 
 set -E
 # -------- Commonly used variables -------
@@ -92,7 +86,7 @@ parse_options() {
     exit 2
   fi
   local OPTIONS=hVv:
-  local LONGOPTIONS=help,version,commit:,tag:,latest
+  local LONGOPTIONS=help,version
   PARSED_OPTIONS=$(getopt --options=$OPTIONS --longoptions=$LONGOPTIONS --name "$0" -- "$@")
   if [[ $? -ne 0 ]]; then
     exit 2
@@ -105,9 +99,6 @@ fi
 
 parse_options "$@"
 eval set -- "$PARSED_OPTIONS"
-unset REPO_COMMIT
-unset REPO_TAG
-unset REPO_LATEST
 
 while true; do
   case "$1" in
@@ -118,18 +109,6 @@ while true; do
     -V|--version)
       version
       exit 0
-      ;;
-    --commit)
-      REPO_COMMIT="$2"
-      shift 2
-      ;;
-    --tag)
-      REPO_TAG="$2"
-      shift 2
-      ;;
-    --latest)
-      REPO_LATEST=1
-      shift
       ;;
     -v)
       PACKAGE_VERSION="$2"
@@ -151,16 +130,17 @@ if [[ $# -gt 2 ]]; then
   die "Too many arguments (given $#, expected 2)"
 elif [[ $# -ne 2 ]]; then
   usage
-  die "You must give both <path-to-source-code> and <package>!"
+  die "You must give both <git-url> and <package>!"
 fi
 
 # -------- Download Sources --------
 
 fetch_repo() {
-  if [[ $1 == github://* ]]; then
-    REPO_PATH="$(honest-clone "$1" --commit=$REPO_COMMIT --tag=$REPO_TAG --latest=$REPO_LATEST)"
-  else
+  if [[ -d "$1" ]]; then
     REPO_PATH="$1"
+  else
+    REPO_PATH="$(honest-clone "$1")"
+    [[ $? != 0 ]] && exit 1
   fi
 }
 
