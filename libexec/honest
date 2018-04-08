@@ -7,7 +7,7 @@
 #        honest --version
 #        honest github://pypa/setuptools --tag v39.0.1 pip:setuptools -v 39.0.1
 #        honest github://david942j/one_gadget --latest gem:one_gadget
-#        honest ~/path_on_my_laptop/bower npm:bower-1.8.4
+#        honest ~/path_on_my_laptop/bower npm:bower
 #
 # Options:
 #        -h, --help
@@ -28,6 +28,12 @@
 #               Specify the tag name to fetch, tag names are listed at https://REPO_ROOT/tags.
 
 set -E
+# -------- Commonly used variables -------
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m' # No Color
+
 # -------- Basic functions --------
 version() {
   echo "Honest Version 0.0.0"
@@ -41,8 +47,12 @@ usage() {
 
 die() {
   local script_name=`basename "$BASH_SOURCE"`
-  echo "$script_name: $1"
+  echo -e "[${RED}ERROR${NC}] $script_name: $1"
   exit 2
+}
+
+info() {
+  echo -e "[${GREEN}INFO${NC}] $1"
 }
 
 resolve_link() {
@@ -62,9 +72,9 @@ abs_dirname() {
   pwd
   cd "$cwd"
 }
-
 HONEST_LIBEXEC="$(abs_dirname "$0")"
 export HONEST_PREFIX="$(abs_dirname "$HONEST_LIBEXEC")"
+HONEST_SHARE="$HONEST_PREFIX"/share/honest
 export HONEST_CWD="$(abs_dirname .)"
 export PATH="$HONEST_LIBEXEC:$PATH"
 
@@ -75,7 +85,7 @@ parse_options() {
     echo "getopt unavailable."
     exit 2
   fi
-  local OPTIONS=hv
+  local OPTIONS=hVv:
   local LONGOPTIONS=help,version,commit:,tag:,latest
   PARSED_OPTIONS=$(getopt --options=$OPTIONS --longoptions=$LONGOPTIONS --name "$0" -- "$@")
   if [[ $? -ne 0 ]]; then
@@ -99,7 +109,7 @@ while true; do
       usage
       exit 0
       ;;
-    -v|--version)
+    -V|--version)
       version
       exit 0
       ;;
@@ -114,6 +124,10 @@ while true; do
     --latest)
       REPO_LATEST=1
       shift
+      ;;
+    -v)
+      PACKAGE_VERSION="$2"
+      shift 2
       ;;
     --)
       shift
@@ -140,17 +154,53 @@ fetch_repo() {
   if [[ $1 == github://* ]]; then
     REPO_PATH="$(honest-clone "$1" --commit=$REPO_COMMIT --tag=$REPO_TAG --latest=$REPO_LATEST)"
   else
-    REPO_PATH=$1
+    REPO_PATH="$1"
   fi
 }
 
+in_array() {
+  local e match="$1"
+  shift
+  for e; do [[ "$e" == "$match" ]] && return 0; done
+  return 1
+}
+
+# This function also sets $vendor and $pkg variable
 download_package() {
-  PACKAGE_PATH="$1"
+  local arg1="$1"
+  vendor=${arg1:0:3}
+  pkg=${arg1:4}
+
+  local cmd="honest-$vendor download $pkg"
+  # currently supported package vendors
+  vendors=("gem")
+  in_array "$vendor" "${vendors[@]}"
+  if [[ ${arg1:3:1} != ':' || $? -ne 0 ]]; then
+    usage
+    die "Invalid package name, see examples."
+  fi
+  if [[ $# -ne 1 ]]; then
+    cmd+=" -v $2"
+  fi
+  PACKAGE_PATH="$($cmd)"
+  if [[ $? -ne 0 ]]; then
+    die "$PACKAGE_PATH"
+  fi
 }
 
 fetch_repo "$1"
-download_package "$2"
+download_package "$2" $PACKAGE_VERSION
 
-honest-diff "$REPO_PATH" "$PACKAGE_PATH"
-unset REPO_PATH
-unset PACKAGE_PATH
+vendor_diff() {
+  if [[ "$vendor" == 'gem' ]]; then
+    # we have used gem.. so ruby must be installed
+    /usr/bin/env ruby "$HONEST_SHARE"/gem/diff.rb $@
+  else
+    exit 1
+  fi
+  if [[ $? -eq 0 ]]; then
+    info "OK, ${YELLOW}$pkg${NC} is ${GREEN}Honest${NC}!"
+  fi
+}
+
+vendor_diff "$REPO_PATH" "$PACKAGE_PATH"

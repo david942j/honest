@@ -28,8 +28,9 @@ if [ -z "$1" ]; then
 fi
 
 HONEST_ROOT="$(abs_dirname "$0")"
-mkdir -p "$PREFIX"/{bin,libexec}
+mkdir -p "$PREFIX"/{bin,libexec,share/honest}
 cp -R "$HONEST_ROOT"/bin/* "$PREFIX"/bin
 cp -R "$HONEST_ROOT"/libexec/* "$PREFIX"/libexec
+cp -R "$HONEST_ROOT"/share/honest/* "$PREFIX"/share/honest
 
 echo "Installed honest to $PREFIX/bin/honest"

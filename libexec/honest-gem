@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+#
+# Usage: honest-gem <command> [arguments...]
+#        honest-gem download one_gadget -v 1.4.1
+#
+
+# TODO: check command 'gem' exists
+
+die() {
+  local script_name=`basename "$0"`
+  echo "$script_name: $1"
+  exit 1
+}
+
+cut_head() {
+  if [[ "$1" != "$2"* ]]; then
+    return 1
+  fi
+  local str="$1"
+  RESULT="${str:${#2}}"
+}
+
+tmp_dir() {
+  # The behavior is a little different betwen Linux and macOS, but it's okay.
+  RESULT="$(TMPDIR=$HONEST_TMPDIR mktemp -d -t honest-XXXXXXXXXX)"
+}
+
+download() {
+  name="$(gem fetch --quiet $@ 2>&1)"
+  cut_head "$name" "Downloaded "
+  if [[ $? -ne 0 ]]; then
+    die "$name"
+  fi
+  name="$RESULT.gem"
+  tmp_dir; tmp="$RESULT"
+  mv "$name" "$tmp/"
+  cd "$tmp"
+  tar xf "$name"
+  # TODO: check contains exactly three files
+  gunzip metadata.gz
+  mkdir data
+  tar xzf data.tar.gz -C data
+  RESULT="$tmp/"
+}
+
+if [[ "$1" == 'download' ]]; then
+  shift
+  download $@
+  echo "$RESULT"
+else
+  exit 1
+fi

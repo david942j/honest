@@ -33,7 +33,7 @@ $ honest
 #        honest --version
 #        honest github://pypa/setuptools --tag v39.0.1 pip:setuptools -v 39.0.1
 #        honest github://david942j/one_gadget --latest gem:one_gadget
-#        honest ~/path_on_my_laptop/bower npm:bower-1.8.4
+#        honest ~/path_on_my_laptop/bower npm:bower
 ```
 
 ## Supported Package Manager

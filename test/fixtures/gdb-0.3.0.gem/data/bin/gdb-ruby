@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+require 'gdb'
+require 'shellwords'
+
+argv = Shellwords.join(ARGV)
+Process.setproctitle('gdb-ruby ' + argv)
+
+GDB::GDB.new(argv).interact
