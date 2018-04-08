@@ -30,6 +30,8 @@
 set -E
 # -------- Commonly used variables -------
 RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
 # -------- Basic functions --------
@@ -47,6 +49,10 @@ die() {
   local script_name=`basename "$BASH_SOURCE"`
   echo -e "[${RED}ERROR${NC}] $script_name: $1"
   exit 2
+}
+
+info() {
+  echo -e "[${GREEN}INFO${NC}] $1"
 }
 
 resolve_link() {
@@ -159,11 +165,11 @@ in_array() {
   return 1
 }
 
-# This function also set $vendor variable
+# This function also sets $vendor and $pkg variable
 download_package() {
   local arg1="$1"
   vendor=${arg1:0:3}
-  local pkg=${arg1:4}
+  pkg=${arg1:4}
 
   local cmd="honest-$vendor download $pkg"
   # currently supported package vendors
@@ -189,6 +195,11 @@ vendor_diff() {
   if [[ "$vendor" == 'gem' ]]; then
     # we have used gem.. so ruby must be installed
     /usr/bin/env ruby "$HONEST_SHARE"/gem/diff.rb $@
+  else
+    exit 1
+  fi
+  if [[ $? -eq 0 ]]; then
+    info "OK, ${YELLOW}$pkg${NC} is ${GREEN}Honest${NC}!"
   fi
 }
 
