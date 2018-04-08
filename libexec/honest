@@ -82,7 +82,7 @@ export PATH="$HONEST_LIBEXEC:$PATH"
 parse_options() {
   getopt --test > /dev/null
   if [[ $? -ne 4 ]]; then
-    echo "getopt unavailable."
+    echo "Please install gnu-getopt for Mac: \'brew install gnu-getopt\'"
     exit 2
   fi
   local OPTIONS=hVv:
