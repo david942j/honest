@@ -23,6 +23,7 @@
 
 set -E
 # -------- Commonly used variables -------
+HONEST_VERSION="0.0.0"
 RED=''
 GREEN=''
 YELLOW=''
@@ -36,7 +37,7 @@ fi
 
 # -------- Basic functions --------
 version() {
-  echo "Honest Version 0.0.0"
+  echo "Honest Version $HONEST_VERSION"
 }
 
 usage() {
@@ -46,8 +47,7 @@ usage() {
 }
 
 die() {
-  local script_name=`basename "$BASH_SOURCE"`
-  echo -e "[${RED}ERROR${NC}] $script_name: $1"
+  echo -e "[${RED}ERROR${NC}] $1"
   exit 2
 }
 
@@ -163,7 +163,7 @@ download_package() {
   in_array "$vendor" "${vendors[@]}"
   if [[ ${arg1:3:1} != ':' || $? -ne 0 ]]; then
     usage
-    die "Invalid package name, see examples."
+    die "Invalid package name \"$arg1\", see examples."
   fi
   if [[ $# -ne 1 ]]; then
     cmd+=" -v $2"
