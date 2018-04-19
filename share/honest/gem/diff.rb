@@ -1,5 +1,4 @@
 require 'digest'
-require 'set'
 require 'yaml'
 
 class HonestError < StandardError
@@ -33,8 +32,8 @@ class Diff
       presented = Dir.glob('**/*', File::FNM_DOTMATCH).select { |f| File.file?(f) }
       additional = presented - @spec.files
       missing = @spec.files - presented
-      unhonest("Additional files in package: #{additional.join(', ')}.") if additional.any?
-      unhonest("Missing files in package: #{missing.join(', ')}.") if missing.any?
+      unhonest("Additional files in package: %s.", ary: additional) if additional.any?
+      unhonest("Missing files in package: %s.", ary: missing) if missing.any?
     end
   end
 
@@ -43,7 +42,7 @@ class Diff
     missing = @spec.files.reject do |f|
       File.file?(File.join(@source_path, f))
     end
-    unhonest("Files in package but not in source: #{missing.join(', ')}.") if missing.any?
+    unhonest("Files in package but not in source: %s.", ary: missing) if missing.any?
   end
 
   def check_hash
@@ -55,7 +54,7 @@ class Diff
       different << f if source != pkg
     end
     # TODO: gen reports
-    unhonest("Files different: #{different.join(', ')}.") if different.any?
+    exit 1 if different.any?
   end
 
   def hash_of(file)
@@ -63,8 +62,8 @@ class Diff
     Digest::SHA256.hexdigest(IO.binread(file))
   end
 
-  def unhonest(msg)
-    raise HonestError, msg
+  def unhonest(msg, ary: [])
+    raise HonestError, format(msg, ary.map(&:inspect).join(', '))
   end
 end
 
