@@ -69,12 +69,11 @@ abbr_form "$1"
 get_tag "$REPO"
 
 tmp_dir; path=$RESULT
-cd $path
 
 go_git() {
   set -e
-  git clone "$REPO" .
-  [[ "$TAG" ]] && git checkout "$TAG"
+  git clone "$REPO" "$path"
+  [[ "$TAG" ]] && cd $path && git checkout "$TAG"
   set +e
 }
 go_git 1>/dev/null
