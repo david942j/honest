@@ -26,10 +26,14 @@
 set -E
 # -------- Commonly used variables -------
 HONEST_VERSION="0.0.0"
-RED=''
-GREEN=''
-YELLOW=''
-NC=''
+SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
+HONEST_ROOT="$SCRIPT_DIR"/..
+HONEST_SHARE="$HONEST_ROOT"/share/honest
+export PATH="$HONEST_ROOT/libexec:$PATH"
+
+HONEST_TMP_DIRS=()
+
+# Color codes
 if [[ -t 1 ]]; then
   RED='\033[0;31m'
   GREEN='\033[0;32m'
@@ -39,43 +43,23 @@ fi
 
 # -------- Basic functions --------
 version() {
-  echo "Honest Version $HONEST_VERSION"
+  echo "Honest version $HONEST_VERSION"
 }
 
 usage() {
   version
   sed -ne '/^#/!q;s/.\{1,2\}//;1,2d;p' < "$0"
-  [ -z "$1" ] || exit "$1"
+  [[ -z "$1" ]] || exit "$1"
 }
 
 die() {
   echo -e "[${RED}ERROR${NC}] $1"
-  exit 2
+  exit 1
 }
 
 info() {
   echo -e "[${GREEN}INFO${NC}] $1"
 }
-
-resolve_link() {
-  $(type -p greadlink readlink | head -1) "$1"
-}
-
-abs_dirname() {
-  local cwd="$(pwd)"
-  local path="$1"
-
-  while [ -n "$path" ]; do
-    cd "${path%/*}"
-    local name="${path##*/}"
-    path="$(resolve_link "$name" || true)"
-  done
-
-  pwd
-  cd "$cwd"
-}
-
-HONEST_TMP_DIRS=()
 
 clear_tmp_dirs() {
   rm -fr "${HONEST_TMP_DIRS[@]}"
@@ -84,12 +68,6 @@ clear_tmp_dirs() {
 push_tmp() {
   HONEST_TMP_DIRS+=("$1")
 }
-
-HONEST_LIBEXEC="$(abs_dirname "$0")"
-export HONEST_PREFIX="$(abs_dirname "$HONEST_LIBEXEC")"
-HONEST_SHARE="$HONEST_PREFIX"/share/honest
-export HONEST_CWD="$(abs_dirname .)"
-export PATH="$HONEST_LIBEXEC:$PATH"
 
 # -------- Option Parsing --------
 parse_options() {
