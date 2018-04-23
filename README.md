@@ -33,7 +33,7 @@ $ honest --version # check if the installation succeed!
 ## Usage
 
 ```bash
-$ honest github:david942j/one_gadget@v1.5.0 gem:one_gadget -v 1.5.0
+$ honest github:david942j/one_gadget gem:one_gadget
 # [INFO] OK, one_gadget is Honest!
 ```
 
@@ -47,7 +47,7 @@ $ honest
 #               <package> [-v=]
 # Examples:
 #        honest --version
-#        honest github:david942j/one_gadget@v1.5.0 gem:one_gadget -v 1.5.0
+#        honest github:david942j/one_gadget gem:one_gadget
 #        honest https://github.com/pypa/setuptools@v39.0.1 pip:setuptools -v 39.0.1
 #        honest ~/path_on_my_laptop/seccomp-tools gem:seccomp-tools -v 1.2.0
 #
@@ -62,6 +62,8 @@ $ honest
 #               - A relative/absolute path.
 #               - https://<git org>/<author>/<project>[@<branch|commit|tag>]
 #               - <github|bitbucket|gitlab>:<author>/<project>[@<branch|commit|tag>]
+#        If no branch/commit/tag is specified, the latest release(tag) will be used.
+#        With this behavior we can have the simplest usage of honest: `$ honest github:user/proj pip:proj`.
 
 ```
 

@@ -5,7 +5,7 @@
 #               <package> [-v=]
 # Examples:
 #        honest --version
-#        honest github:david942j/one_gadget@v1.5.0 gem:one_gadget -v 1.5.0
+#        honest github:david942j/one_gadget gem:one_gadget
 #        honest https://github.com/pypa/setuptools@v39.0.1 pip:setuptools -v 39.0.1
 #        honest ~/path_on_my_laptop/seccomp-tools gem:seccomp-tools -v 1.2.0
 #
@@ -20,6 +20,8 @@
 #               - A relative/absolute path.
 #               - https://<git org>/<author>/<project>[@<branch|commit|tag>]
 #               - <github|bitbucket|gitlab>:<author>/<project>[@<branch|commit|tag>]
+#        If no branch/commit/tag is specified, the latest release(tag) will be used.
+#        With this behavior we can have the simplest usage of honest: `$ honest github:user/proj pip:proj`.
 
 set -E
 # -------- Commonly used variables -------
@@ -72,6 +74,17 @@ abs_dirname() {
   pwd
   cd "$cwd"
 }
+
+HONEST_TMP_DIRS=()
+
+clear_tmp_dirs() {
+  rm -fr "${HONEST_TMP_DIRS[@]}"
+}
+
+push_tmp() {
+  HONEST_TMP_DIRS+=("$1")
+}
+
 HONEST_LIBEXEC="$(abs_dirname "$0")"
 export HONEST_PREFIX="$(abs_dirname "$HONEST_LIBEXEC")"
 HONEST_SHARE="$HONEST_PREFIX"/share/honest
@@ -141,6 +154,7 @@ fetch_repo() {
   else
     REPO_PATH="$(honest-clone "$1")"
     [[ $? != 0 ]] && exit 1
+    push_tmp "$REPO_PATH"
   fi
 }
 
@@ -172,6 +186,7 @@ download_package() {
   if [[ $? -ne 0 ]]; then
     die "$PACKAGE_PATH"
   fi
+  push_tmp "$PACKAGE_PATH"
 }
 
 download_package "$2" $PACKAGE_VERSION
@@ -186,6 +201,7 @@ vendor_diff() {
   fi
   if [[ $? -eq 0 ]]; then
     info "OK, ${YELLOW}$pkg${NC} is ${GREEN}Honest${NC}!"
+    clear_tmp_dirs
   else
     if [[ -t 1 ]]; then
       (set -x; git diff --no-index --diff-filter=M "$REPO_PATH" "$PACKAGE_PATH"data)

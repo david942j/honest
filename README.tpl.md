@@ -33,7 +33,7 @@ $ honest --version # check if the installation succeed!
 ## Usage
 
 ```bash
-$ honest github:david942j/one_gadget@v1.5.0 gem:one_gadget -v 1.5.0
+$ honest github:david942j/one_gadget gem:one_gadget
 # [INFO] OK, one_gadget is Honest!
 ```
 

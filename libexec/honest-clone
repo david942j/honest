@@ -73,7 +73,10 @@ tmp_dir; path=$RESULT
 go_git() {
   set -e
   git clone "$REPO" "$path"
-  [[ "$TAG" ]] && cd $path && git checkout --detach "$TAG"
+  cd $path
+  # if $TAG is not present, checkout to the latest release.
+  TAG="${TAG:-$(git describe --tags `git rev-list --tags --max-count=1 2>/dev/null` 2>/dev/null)}"
+  [[ "$TAG" ]] && git checkout --detach "$TAG"
   set +e
 }
 go_git 1>/dev/null
