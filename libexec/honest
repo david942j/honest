@@ -5,7 +5,7 @@
 #               <package> [-v=]
 # Examples:
 #        honest --version
-#        honest github:david942j/one_gadget@448e73dfcc60feb08cc71b843387e63a00791477 gem:one_gadget
+#        honest github:david942j/one_gadget@v1.5.0 gem:one_gadget -v 1.5.0
 #        honest https://github.com/pypa/setuptools@v39.0.1 pip:setuptools -v 39.0.1
 #        honest ~/path_on_my_laptop/seccomp-tools gem:seccomp-tools -v 1.2.0
 #
@@ -174,8 +174,8 @@ download_package() {
   fi
 }
 
-fetch_repo "$1"
 download_package "$2" $PACKAGE_VERSION
+fetch_repo "$1"
 
 vendor_diff() {
   if [[ "$vendor" == 'gem' ]]; then

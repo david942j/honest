@@ -40,29 +40,7 @@ $ honest github:david942j/one_gadget@v1.5.0 gem:one_gadget -v 1.5.0
 #### See help for more details
 
 ```bash
-$ honest
-# Honest Version 0.0.0
-# Usage: honest [-h/--help] [-V/--version]
-#               <git-url>
-#               <package> [-v=]
-# Examples:
-#        honest --version
-#        honest github:david942j/one_gadget@v1.5.0 gem:one_gadget -v 1.5.0
-#        honest https://github.com/pypa/setuptools@v39.0.1 pip:setuptools -v 39.0.1
-#        honest ~/path_on_my_laptop/seccomp-tools gem:seccomp-tools -v 1.2.0
-#
-# Options:
-#        -h, --help
-#               Show this usage.
-#        -V, --version
-#               Display version information and exit.
-#
-# Git Url Parameter:
-#        <git-url> can be:
-#               - A relative/absolute path.
-#               - https://<git org>/<author>/<project>[@<branch|commit|tag>]
-#               - <github|bitbucket|gitlab>:<author>/<project>[@<branch|commit|tag>]
-
+SHELL_OUTPUT_OF(honest)
 ```
 
 ## Screenshots
