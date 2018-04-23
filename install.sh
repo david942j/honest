@@ -1,36 +1,28 @@
 #!/usr/bin/env bash
+SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
+
+# Stop at failure
 set -e
 
-resolve_link() {
-  $(type -p greadlink readlink | head -1) "$1"
+function print_help() {
+  echo "Usage:"
+  echo "       $0 <PATH TO INSTALL>"
+  echo ""
+  echo "Example:"
+  echo "       $0 /usr/local"
+  echo ""
 }
 
-abs_dirname() {
-  local cwd="$(pwd)"
-  local path="$1"
+# Set prefix and exit if empty
+PREFIX="$(readlink -f "$1")" || true
+[[ "$PREFIX" == "" ]] && print_help && exit 1
 
-  while [ -n "$path" ]; do
-    cd "${path%/*}"
-    local name="${path##*/}"
-    path="$(resolve_link "$name" || true)"
-  done
-
-  pwd
-  cd "$cwd"
-}
-
-PREFIX="$1"
-if [ -z "$1" ]; then
-  { echo "Usage: $0 <prefix>"
-    echo "  e.g. $0 /usr/local"
-  } >&2
-  exit 1
-fi
-
-HONEST_ROOT="$(abs_dirname "$0")"
+# Create target directories
 mkdir -p "$PREFIX"/{bin,libexec,share/honest}
-cp -R "$HONEST_ROOT"/bin/* "$PREFIX"/bin
-cp -R "$HONEST_ROOT"/libexec/* "$PREFIX"/libexec
-cp -R "$HONEST_ROOT"/share/honest/* "$PREFIX"/share/honest
 
-echo "Installed honest to $PREFIX/bin/honest"
+# Install files with reserved relative symbolic link
+cp -dr "$SCRIPT_DIR"/bin/* "$PREFIX"/bin
+cp -dr "$SCRIPT_DIR"/libexec/* "$PREFIX"/libexec
+cp -dr "$SCRIPT_DIR"/share/honest/* "$PREFIX"/share/honest
+
+echo "Installed honest to '$PREFIX/bin/honest'"
