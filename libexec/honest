@@ -27,7 +27,7 @@ set -E
 
 SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
 # Import common functions and variables of honest
-source "$SCRIPT_DIR"/../libexec/honest-common.sh
+source "$SCRIPT_DIR"/../share/honest/honest-common.sh
 
 # -------- Commonly used variables -------
 HONEST_ROOT="$SCRIPT_DIR"/..
