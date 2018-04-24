@@ -100,27 +100,35 @@ in_array() {
   return 1
 }
 
-# This function also sets $vendor and $pkg variable
+#######################################
+# Interface function for downloading packages from any vendors.
+# This function also sets $vendor and $pkg variable for later use.
+# Globals:
+#   None
+# Arguments:
+#   <Package> The package name with format '<vendor>:<package name>'
+#   [Package version] Optional package version specified by user
+# Returns:
+#   None
+#######################################
 download_package() {
-  local arg1="$1"
-  vendor=${arg1:0:3}
-  pkg=${arg1:4}
+  local cmd=()
+  # Match the first : and extract vendor/pkg name
+  vendor=${1%%:*}
+  pkg=${1#*:}
 
-  local cmd="honest-$vendor download $pkg"
-  # currently supported package vendors
-  vendors=("gem")
-  in_array "$vendor" "${vendors[@]}"
-  if [[ ${arg1:3:1} != ':' || $? -ne 0 ]]; then
-    usage
-    die "Invalid package name \"$arg1\", see examples."
-  fi
-  if [[ $# -ne 1 ]]; then
-    cmd+=" -v $2"
-  fi
-  PACKAGE_PATH="$($cmd)"
-  if [[ $? -ne 0 ]]; then
-    die "$PACKAGE_PATH"
-  fi
+  # Check format
+  [[ "$1" != *":"* ]] && die "Vendor format error - missing separater ':'"
+  ( [[ "$vendor" == "" ]] || [[ "$pkg" == "" ]] ) && die "Vendor format error"
+  # Check supported vendors
+  ! in_array "$vendor" "${VENDORS[@]}" && die "Vendor '$vendor' is currently not supported"
+
+  # Compile the command
+  cmd+=(honest-$vendor)
+  cmd+=(download $pkg)
+  [[ "$2" != "" ]] && cmd+=(-v $2)
+  PACKAGE_PATH="$(${cmd[@]})"
+  [[ $? != 0 ]] && die "Fail on running '${cmd[@]}'"
   push_tmp "$PACKAGE_PATH"
 }
 
