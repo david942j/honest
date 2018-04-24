@@ -31,6 +31,9 @@ HONEST_ROOT="$SCRIPT_DIR"/..
 HONEST_SHARE="$HONEST_ROOT"/share/honest
 export PATH="$HONEST_ROOT/libexec:$PATH"
 
+# currently supported package vendors
+VENDORS=("gem")
+
 HONEST_TMP_DIRS=()
 
 # Color codes
@@ -49,7 +52,6 @@ version() {
 usage() {
   version
   sed -ne '/^#/!q;s/.\{1,2\}//;1,2d;p' < "$0"
-  [[ -z "$1" ]] || exit "$1"
 }
 
 die() {
@@ -69,61 +71,6 @@ push_tmp() {
   HONEST_TMP_DIRS+=("$1")
 }
 
-# -------- Option Parsing --------
-parse_options() {
-  getopt --test > /dev/null
-  if [[ $? -ne 4 ]]; then
-    echo "Please install gnu-getopt for Mac: \'brew install gnu-getopt\'"
-    exit 2
-  fi
-  local OPTIONS=hVv:
-  local LONGOPTIONS=help,version
-  PARSED_OPTIONS=$(getopt --options=$OPTIONS --longoptions=$LONGOPTIONS --name "$0" -- "$@")
-  if [[ $? -ne 0 ]]; then
-    exit 2
-  fi
-}
-
-if [[ $# -eq 0 ]]; then
-  usage 1
-fi
-
-parse_options "$@"
-eval set -- "$PARSED_OPTIONS"
-
-while true; do
-  case "$1" in
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    -V|--version)
-      version
-      exit 0
-      ;;
-    -v)
-      PACKAGE_VERSION="$2"
-      shift 2
-      ;;
-    --)
-      shift
-      break
-      ;;
-    *)
-      echo "Hey you forget to handle '$1'!"
-      exit 3
-      ;;
-  esac
-done
-
-if [[ $# -gt 2 ]]; then
-  usage
-  die "Too many arguments (given $#, expected 2)"
-elif [[ $# -ne 2 ]]; then
-  usage
-  die "You must give both <git-url> and <package>!"
-fi
-
 # -------- Download Sources --------
 
 fetch_repo() {
@@ -136,6 +83,16 @@ fetch_repo() {
   fi
 }
 
+#######################################
+# Check the if the element is in the array.
+# Globals:
+#   None
+# Arguments:
+#   <Element>
+#   <Array> : e.g. "${array[@]}"
+# Returns:
+#   succeed:0 / failed:1
+#######################################
 in_array() {
   local e match="$1"
   shift
@@ -167,9 +124,6 @@ download_package() {
   push_tmp "$PACKAGE_PATH"
 }
 
-download_package "$2" $PACKAGE_VERSION
-fetch_repo "$1"
-
 vendor_diff() {
   if [[ "$vendor" == 'gem' ]]; then
     # we have used gem.. so ruby must be installed
@@ -188,4 +142,42 @@ vendor_diff() {
   fi
 }
 
-vendor_diff "$REPO_PATH" "$PACKAGE_PATH"
+main() {
+  local package_ver=""
+  local args=()
+
+  # Parse arguments
+  while [[ "$1" != "" ]]; do
+    case "$1" in
+      -h|--help )
+        usage
+        exit 0
+        ;;
+      -V|--version)
+        version
+        exit 0
+        ;;
+      -v)
+        package_ver="$2"
+        shift 2
+        ;;
+      * )
+        # Exit on argument starting with hyphen "-"
+        [[ "$1" == "-"* ]] && die "Unknown argument $1"
+        # Remember the string type arguments in the array
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  # Check # of input arguments after parsing the input arguments
+  [[ ${#args[@]} == 0 ]] && usage && exit 1
+  [[ ${#args[@]} < 2 ]] && die "Both <git-url> and <package> are required!"
+
+  download_package "${args[1]}" $package_ver
+  fetch_repo "${args[0]}"
+  vendor_diff "$REPO_PATH" "$PACKAGE_PATH"
+}
+
+main "$@"
