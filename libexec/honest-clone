@@ -90,7 +90,7 @@ main() {
   # Split the string into two parts, repo and tag iff the tag exists in url.
   [[ "$tag" != "" ]] && url=${1%@*}
 
-  local path=$(get_hashed_name honest-XXXXXXXXXX)
+  local path=$(get_tmp_dir honest-XXXXXXXXXX)
   git_clone "$url" "$tag" "$path"
 
   # Return the path to caller

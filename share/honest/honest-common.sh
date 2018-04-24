@@ -118,7 +118,7 @@ get_index() {
   echo "-1"
 }
 
-get_hashed_name() {
+get_tmp_dir() {
   # The behavior is a little different betwen Linux and macOS, but it's okay.
   TMPDIR=$HONEST_TMPDIR mktemp -d -t $1
 }
