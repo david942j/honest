@@ -71,18 +71,6 @@ push_tmp() {
   HONEST_TMP_DIRS+=("$1")
 }
 
-# -------- Download Sources --------
-
-fetch_repo() {
-  if [[ -d "$1" ]]; then
-    REPO_PATH="$1"
-  else
-    REPO_PATH="$(honest-clone "$1")"
-    [[ $? != 0 ]] && exit 1
-    push_tmp "$REPO_PATH"
-  fi
-}
-
 #######################################
 # Check the if the element is in the array.
 # Globals:
@@ -98,6 +86,27 @@ in_array() {
   shift
   for e; do [[ "$e" == "$match" ]] && return 0; done
   return 1
+}
+
+#######################################
+# Download the git repo of a git package.
+# Globals:
+#   None
+# Arguments:
+#   <Package> The package name with format '<vendor>:<author>/<project>[@..]'
+# Returns:
+#   None
+#   Set global variable 'REPO_PATH'
+#######################################
+fetch_repo() {
+  if [[ -d "$1" ]]; then
+    REPO_PATH="$1"
+    info "Use local repo directory '$1'"
+  else
+    REPO_PATH="$(honest-clone "$1")"
+    [[ $? != 0 ]] && die "Fail on fetching repo '$1'"
+    push_tmp "$REPO_PATH"
+  fi
 }
 
 #######################################
@@ -183,8 +192,8 @@ main() {
   [[ ${#args[@]} == 0 ]] && usage && exit 1
   [[ ${#args[@]} < 2 ]] && die "Both <git-url> and <package> are required!"
 
-  download_package "${args[1]}" $package_ver
   fetch_repo "${args[0]}"
+  download_package "${args[1]}" $package_ver
   vendor_diff "$REPO_PATH" "$PACKAGE_PATH"
 }
 
