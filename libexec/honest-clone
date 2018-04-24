@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 #
-# Usage: honest-clone <git-url>
+# Usage: honest-clone <git-url> [--quiet]
+#
+# Options:
+#        --quiet
+#               Hide the all the output messages except for the name of temp directory
 #
 # Git Url Parameter:
 #        <git-url> can be:
@@ -8,6 +12,7 @@
 #               - <github|bitbucket|gitlab>:<author>/<project>[@<branch|commit|tag>]
 
 SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
+QUITE_MODE="0"
 # Import common functions and variables of honest
 source "$SCRIPT_DIR"/../share/honest/honest-common.sh
 
@@ -64,31 +69,59 @@ git_clone() {
   local url="$1"
   local tag="$2"
   local path="$3"
+  [[ "$QUITE_MODE" == "1" ]] && local extra_git_args="--quiet"
   set -e
   # TODO Use shallow clone or other techniques to improve the speed
-  git clone "$url" "$path" >/dev/null
+  git clone $extra_git_args "$url" "$path"
   cd $path
   # if $tag is not present, checkout to the latest release.
   tag="${tag:-$(git describe --tags `git rev-list --tags --max-count=1 2>/dev/null` 2>/dev/null)}"
-  [[ "$tag" != "" ]] && git checkout --detach "$tag" >/dev/null
+  [[ "$tag" != "" ]] && git checkout $extra_git_args --detach "$tag"
   set +e
 }
 
 main() {
-  [[ $# != 1 ]] && usage && exit 1
-  ([[ $1 == "-h" ]] || [[ $1 == "--help" ]]) && usage && exit 0
+  local args=()
+
+  # Parse arguments
+  while [[ "$1" != "" ]]; do
+    case "$1" in
+      -h|--help )
+        usage
+        exit 0
+        ;;
+      -V|--version)
+        version
+        exit 0
+        ;;
+      --quite)
+        QUITE_MODE="1"
+        shift
+        ;;
+      * )
+        # Exit on argument starting with hyphen "-"
+        [[ "$1" == "-"* ]] && die "Unknown argument $1"
+        # Remember the string type arguments in the array
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  [[ ${#args[@]} == 0 ]] && usage && exit 0
+  local repo="${args[0]}"
 
   # Verify the input arguments
-  check_repo_format "$1"
+  check_repo_format "$repo"
 
   # Convert the format
-  local url=$(abbr_form "$1")
+  local url=$(abbr_form "$repo")
 
   # Retrieve the tag string from url
   local tag=$(get_tag_from_url $url)
 
   # Split the string into two parts, repo and tag iff the tag exists in url.
-  [[ "$tag" != "" ]] && url=${1%@*}
+  [[ "$tag" != "" ]] && url=${url%@*}
 
   local path=$(get_tmp_dir honest-XXXXXXXXXX)
   git_clone "$url" "$tag" "$path"
