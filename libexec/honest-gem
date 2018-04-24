@@ -4,49 +4,44 @@
 #        honest-gem download one_gadget -v 1.4.1
 #
 
-# TODO: check command 'gem' exists
+SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
+# Import common functions and variables of honest
+source "$SCRIPT_DIR"/../share/honest/honest-common.sh
 
-die() {
-  local script_name=`basename "$0"`
-  echo "$script_name: $1"
-  exit 1
-}
+extract() {
+  set -e
 
-cut_head() {
-  if [[ "$1" != "$2"* ]]; then
-    return 1
-  fi
-  local str="$1"
-  RESULT="${str:${#2}}"
-}
+  tar -xf "$1"
+  # TODO: check contains exactly three files
+  gunzip metadata.gz
 
-tmp_dir() {
-  # The behavior is a little different betwen Linux and macOS, but it's okay.
-  RESULT="$(TMPDIR=$HONEST_TMPDIR mktemp -d -t honest-XXXXXXXXXX)"
+  mkdir -p data
+  tar -xzf data.tar.gz -C data
+
+  set +e
 }
 
 download() {
-  name="$(gem fetch --quiet $@ 2>&1)"
-  cut_head "$name" "Downloaded "
-  if [[ $? -ne 0 ]]; then
-    die "$name"
-  fi
-  name="$RESULT.gem"
-  tmp_dir; tmp="$RESULT"
-  mv "$name" "$tmp/"
-  cd "$tmp"
-  tar xf "$name"
-  # TODO: check contains exactly three files
-  gunzip metadata.gz
-  mkdir data
-  tar xzf data.tar.gz -C data
-  RESULT="$tmp/"
+  local tmp_dir=$(get_tmp_dir honest-XXXXXXXXXX)
+
+  # Create directory if not exist
+  mkdir -p "$tmp_dir"
+  # Return the directory name to the caller
+  echo "$tmp_dir"
+
+  # Download package in the temp directory
+  local mesg="$(cd $tmp_dir && gem fetch --quiet $@ 2>&1)"
+  [[ "$mesg" != "Downloaded "* ]] && die "$mesg"
+
+  # Convert the string to <package name>.gem
+  local name=$(remove_prefix "$mesg" "Downloaded ")".gem"
+
+  # Go to temp directory and extract the file
+  (cd "$tmp_dir" && extract "$name")
 }
 
-if [[ "$1" == 'download' ]]; then
-  shift
-  download $@
-  echo "$RESULT"
-else
-  exit 1
-fi
+! command_exist "gem" && die "Command 'gem' is not installed on your system"
+[[ "$1" != "download" ]] && exit 1
+
+shift
+download $@
