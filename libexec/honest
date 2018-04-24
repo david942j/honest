@@ -34,9 +34,6 @@ HONEST_ROOT="$SCRIPT_DIR"/..
 HONEST_SHARE="$HONEST_ROOT"/share/honest
 export PATH="$HONEST_ROOT/libexec:$PATH"
 
-# Currently supported package vendors
-VENDORS=("gem")
-
 HONEST_TMP_DIRS=()
 
 clear_tmp_dirs() {
