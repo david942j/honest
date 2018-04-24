@@ -72,6 +72,27 @@ push_tmp() {
 }
 
 #######################################
+# Check the format of package name. Exit on any failure.
+# Globals:
+#   None
+# Arguments:
+#   <Package> The package name with format '<vendor>:<package name>'
+# Returns:
+#   None
+#######################################
+check_package_format() {
+  # Match the first : and extract vendor/pkg name
+  vendor=${1%%:*}
+  pkg=${1#*:}
+
+  # Check format
+  [[ "$1" != *":"* ]] && die "Vendor format error - missing separater ':'"
+  ( [[ "$vendor" == "" ]] || [[ "$pkg" == "" ]] ) && die "Vendor format error"
+  # Check supported vendors
+  ! in_array "$vendor" "${VENDORS[@]}" && die "Vendor '$vendor' is currently not supported"
+}
+
+#######################################
 # Check the if the element is in the array.
 # Globals:
 #   None
@@ -111,43 +132,47 @@ fetch_repo() {
 
 #######################################
 # Interface function for downloading packages from any vendors.
-# This function also sets $vendor and $pkg variable for later use.
 # Globals:
 #   None
 # Arguments:
-#   <Package> The package name with format '<vendor>:<package name>'
+#   <Vendor>
+#   <Package Name>
 #   [Package version] Optional package version specified by user
 # Returns:
 #   None
+#   Set global variable 'PACKAGE_PATH'
 #######################################
 download_package() {
   local cmd=()
-  # Match the first : and extract vendor/pkg name
-  vendor=${1%%:*}
-  pkg=${1#*:}
-
-  # Check format
-  [[ "$1" != *":"* ]] && die "Vendor format error - missing separater ':'"
-  ( [[ "$vendor" == "" ]] || [[ "$pkg" == "" ]] ) && die "Vendor format error"
-  # Check supported vendors
-  ! in_array "$vendor" "${VENDORS[@]}" && die "Vendor '$vendor' is currently not supported"
+  local vendor=$1
+  local pkg=$2
+  local ver=$3
 
   # Compile the command
   cmd+=(honest-$vendor)
   cmd+=(download $pkg)
-  [[ "$2" != "" ]] && cmd+=(-v $2)
+  [[ "$ver" != "" ]] && cmd+=(-v $ver)
+
+  # Execute the command and get the return string
   PACKAGE_PATH="$(${cmd[@]})"
   [[ $? != 0 ]] && die "Fail on running '${cmd[@]}'"
   push_tmp "$PACKAGE_PATH"
 }
 
 vendor_diff() {
-  if [[ "$vendor" == 'gem' ]]; then
-    # we have used gem.. so ruby must be installed
-    /usr/bin/env ruby "$HONEST_SHARE"/gem/diff.rb $@
-  else
-    exit 1
-  fi
+  local vendor=$1
+  local pkg=$2
+  local src=$3
+  local tgt=$4
+
+  case "$vendor" in
+    gem )
+      /usr/bin/env ruby "$HONEST_SHARE"/gem/diff.rb $src $tgt
+      ;;
+    * )
+      die "Vendor '$vendor' is currently not supported"
+      ;;
+  esac
   if [[ $? -eq 0 ]]; then
     info "OK, ${YELLOW}$pkg${NC} is ${GREEN}Honest${NC}!"
     clear_tmp_dirs
@@ -192,9 +217,15 @@ main() {
   [[ ${#args[@]} == 0 ]] && usage && exit 1
   [[ ${#args[@]} < 2 ]] && die "Both <git-url> and <package> are required!"
 
+  # Check the format and exit on any failure
+  check_package_format "${args[1]}"
+  # Match the first : and extract vendor/pkg name
+  local vendor=${args[1]%%:*}
+  local pkg=${args[1]#*:}
+
   fetch_repo "${args[0]}"
-  download_package "${args[1]}" $package_ver
-  vendor_diff "$REPO_PATH" "$PACKAGE_PATH"
+  download_package $vendor $pkg $package_ver
+  vendor_diff $vendor $pkg "$REPO_PATH" "$PACKAGE_PATH"
 }
 
 main "$@"
