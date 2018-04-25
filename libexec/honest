@@ -25,6 +25,9 @@
 
 set -E
 
+# Compatibility to MAC
+[[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
+
 SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
 # Import common functions and variables of honest
 source "$SCRIPT_DIR"/../share/honest/honest-common.sh

@@ -11,6 +11,9 @@
 #               - https://<git org>/<author>/<project>[@<branch|commit|tag>]
 #               - <github|bitbucket|gitlab>:<author>/<project>[@<branch|commit|tag>]
 
+# Compatibility to MAC
+[[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
+
 SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
 QUITE_MODE="0"
 # Import common functions and variables of honest
