@@ -6,11 +6,22 @@ VENDORS=("gem")
 REPO_VENDORS=("github" "bitbucket" "gitlab")
 REPO_VENDORS_HOST=("github.com" "bitbucket.org" "gitlab.com")
 
+# Set log level to stderr if not set. The number can be 0(any) - 5,
+# representing - debug, info, warn, error, and fatal
+HONEST_LOGGING_LEVEL=${HONEST_LOGGING_LEVEL:-1}
+LOG_LEVEL_DEBUG=0
+LOG_LEVEL_INFO=1
+LOG_LEVEL_WARN=2
+LOG_LEVEL_ERROR=3
+LOG_LEVEL_FATAL=4
+
 # Color codes
 if [[ -t 1 ]]; then
   RED='\033[0;31m'
   GREEN='\033[0;32m'
   YELLOW='\033[0;33m'
+  BLUE='\033[0;34m'
+  GRAY='\033[0;37m'
   NC='\033[0m' # No Color
 fi
 
@@ -25,12 +36,32 @@ usage() {
 }
 
 die() {
-  echo -e "[${RED}ERROR${NC}] $1"
-  exit 1
+  error "$1" && exit 1
+}
+
+debug() {
+  local level=$HONEST_LOGGING_LEVEL
+  [[ $level -le $LOG_LEVEL_DEBUG ]] && echo -e "[${GRAY}DEBUG${NC}] $1" >&2
 }
 
 info() {
-  echo -e "[${GREEN}INFO${NC}] $1"
+  local level=$HONEST_LOGGING_LEVEL
+  [[ $level -le $LOG_LEVEL_INFO ]] && echo -e "[${GREEN}INFO${NC}] $1" >&2
+}
+
+warn() {
+  local level=$HONEST_LOGGING_LEVEL
+  [[ $level -le $LOG_LEVEL_WARN ]] && echo -e "[${YELLOW}WARN${NC}] $1" >&2
+}
+
+error() {
+  local level=$HONEST_LOGGING_LEVEL
+  [[ $level -le $LOG_LEVEL_ERROR ]] && echo -e "[${RED}ERROR${NC}] $1" >&2
+}
+
+fatal() {
+  local level=$HONEST_LOGGING_LEVEL
+  [[ $level -le $LOG_LEVEL_FATAL ]] && echo -e "[${RED}FATAL${NC}] $1" >&2
 }
 
 #######################################
