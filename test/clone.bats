@@ -4,14 +4,21 @@ load test_helper
 script=clone.bats
 @test "$script: usage" {
   run honest-clone
-  [ "$status" -eq 1 ]
-  [ "$output" = "Usage: honest-clone <git-url>" ]
+  [ "$status" -eq 0 ]
+  [ "${lines[0]:0:15}" = "Honest version " ]
+  [ "${lines[1]}" = "Usage: honest-clone <git-url> [--quiet]" ]
 }
 
 @test "$script: invalid" {
   run honest-clone zz
-  [ "$status" -eq 128 ]
-  [ "$output" = "fatal: repository 'zz' does not exist" ]
+  [ "$status" -eq 1 ]
+  [ "$output" = "[ERROR] Repo format error - missing separater ':' or '/'" ]
+}
+
+@test "$script: invalid repo vendor" {
+  run honest-clone zz:aa/bb
+  [ "$status" -eq 1 ]
+  [ "$output" = "[ERROR] Vendor of repo 'zz' is currently not supported" ]
 }
 
 @test "$script: fetch tag" {
