@@ -116,7 +116,7 @@ vendor_diff() {
     clear_tmp_dirs
   else
     if [[ -t 1 ]]; then
-      (set -x; git diff --no-index --diff-filter=M "$REPO_PATH" "$PACKAGE_PATH"data)
+      (set -x; git --no-pager diff --no-index --diff-filter=M "$REPO_PATH" "$PACKAGE_PATH"/data)
     fi
     info "NO, ${YELLOW}$pkg${NC} is ${RED}Unhonest${NC}!"
   fi
