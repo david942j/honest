@@ -60,6 +60,7 @@ fetch_repo() {
     REPO_PATH="$1"
     info "Use local repo directory '$1'"
   else
+    info "Fetching the repo '$1'..."
     REPO_PATH="$(honest-clone "$1")"
     [[ $? != 0 ]] && die "Fail on fetching repo '$1'"
     push_tmp "$REPO_PATH"
@@ -90,6 +91,7 @@ download_package() {
   [[ "$ver" != "" ]] && cmd+=(-v $ver)
 
   # Execute the command and get the return string
+  info "Downloading the package '$pkg'..."
   PACKAGE_PATH="$(${cmd[@]})"
   [[ $? != 0 ]] && die "Fail on running '${cmd[@]}'"
   push_tmp "$PACKAGE_PATH"
@@ -101,6 +103,7 @@ vendor_diff() {
   local src=$3
   local tgt=$4
 
+  info "Calculating the honesty..."
   case "$vendor" in
     gem )
       /usr/bin/env ruby "$HONEST_SHARE"/gem/diff.rb $src $tgt
