@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 #
-# Usage: honest [-h/--help] [-V/--version]
+# Usage: honest [-h/--help] [--version]
 #               <git-url>
-#               <package> [-v=]
+#               <package> [-v=A[:B]] <---  [@<branch|commit|tag>]
+#
 # Examples:
 #        honest --version
 #        honest github:david942j/one_gadget gem:one_gadget
-#        honest https://github.com/pypa/setuptools@v39.0.1 pip:setuptools -v 39.0.1
+#        honest https://github.com/pypa/setuptools pip:setuptools -v 39.0.1:39.0.1
 #        honest ~/path_on_my_laptop/seccomp-tools gem:seccomp-tools -v 1.2.0
 #
 # Options:
@@ -18,8 +19,8 @@
 # Git Url Parameter:
 #        <git-url> can be:
 #               - A relative/absolute path.
-#               - https://<git org>/<author>/<project>[@<branch|commit|tag>]
-#               - <github|bitbucket|gitlab>:<author>/<project>[@<branch|commit|tag>]
+#               - https://<git org>/<author>/<project>
+#               - <github|bitbucket|gitlab>:<author>/<project>
 #        If no branch/commit/tag is specified, the latest release(tag) will be used.
 #        With this behavior we can have the simplest usage of honest: `$ honest github:user/proj pip:proj`.
 
@@ -35,94 +36,47 @@ HONEST_ROOT="$SCRIPT_DIR"/..
 HONEST_SHARE="$HONEST_ROOT"/share/honest
 export PATH="$HONEST_ROOT/libexec:$PATH"
 
-HONEST_TMP_DIRS=()
+SUPPORTED_PROTOCOLS=(local git gem)
 
-clear_tmp_dirs() {
-  rm -fr "${HONEST_TMP_DIRS[@]}"
+protocol_of() {
+  case "$1" in
+    http://*|https://*|git* )  echo "git" ;;
+    gem:* ) echo "gem" ;;
+    #pip:* ) echo "pip" ;;
+  esac
+  [[ -d "$1" ]] && echo "local"
 }
 
-push_tmp() {
-  HONEST_TMP_DIRS+=("$1")
-}
+is_honest() {
+  local vendor=${1%%:*}
+  local pkg_name=${1#*:}
+  local repo_path=$2
+  local pkg_path=$3
+  local ret=0
 
-#######################################
-# Download the git repo of a git package.
-# Globals:
-#   None
-# Arguments:
-#   <Package> The package name with format '<vendor>:<author>/<project>[@..]'
-# Returns:
-#   None
-#   Set global variable 'REPO_PATH'
-#######################################
-fetch_repo() {
-  if [[ -d "$1" ]]; then
-    REPO_PATH="$1"
-    info "Use local repo directory '$1'"
-  else
-    info "Fetching the repo '$1'..."
-    REPO_PATH="$(honest-clone "$1")"
-    [[ $? != 0 ]] && die "Fail on fetching repo '$1'"
-    push_tmp "$REPO_PATH"
-  fi
-}
-
-#######################################
-# Interface function for downloading packages from any vendors.
-# Globals:
-#   None
-# Arguments:
-#   <Vendor>
-#   <Package Name>
-#   [Package version] Optional package version specified by user
-# Returns:
-#   None
-#   Set global variable 'PACKAGE_PATH'
-#######################################
-download_package() {
-  local cmd=()
-  local vendor=$1
-  local pkg=$2
-  local ver=$3
-
-  # Compile the command
-  cmd+=(honest-$vendor)
-  cmd+=(download $pkg)
-  [[ "$ver" != "" ]] && cmd+=(-v $ver)
-
-  # Execute the command and get the return string
-  info "Downloading the package '$pkg'..."
-  PACKAGE_PATH="$(${cmd[@]})"
-  [[ $? != 0 ]] && die "Fail on running '${cmd[@]}'"
-  push_tmp "$PACKAGE_PATH"
-}
-
-vendor_diff() {
-  local vendor=$1
-  local pkg=$2
-  local src=$3
-  local tgt=$4
-
-  info "Calculating the honesty..."
   case "$vendor" in
     gem )
-      /usr/bin/env ruby "$HONEST_SHARE"/gem/diff.rb $src $tgt
+      /usr/bin/env ruby "$HONEST_SHARE"/gem/diff.rb "$repo_path" "$pkg_path"
+      ret=$?
       ;;
     * )
       die "Vendor '$vendor' is currently not supported"
       ;;
   esac
-  if [[ $? -eq 0 ]]; then
-    info "OK, ${YELLOW}$pkg${NC} is ${GREEN}Honest${NC}!"
-    clear_tmp_dirs
-  else
-    git --no-pager diff --no-index --diff-filter=M "$REPO_PATH" "$PACKAGE_PATH"/data
-    info "NO, ${YELLOW}$pkg${NC} is ${RED}Unhonest${NC}!"
+
+  # Show the differences
+  if [[ $ret != 0 ]]; then
+    git --no-pager diff --no-index --diff-filter=M "$repo_path" "$pkg_path"/data
   fi
+
+  return $ret
 }
 
+# A dummy function
+honest-local() { return 0; }
+
 main() {
-  local package_ver=""
+  local package_ver=()
   local args=()
 
   # Parse arguments
@@ -132,12 +86,13 @@ main() {
         usage
         exit 0
         ;;
-      -V|--version)
+      --version)
         version
         exit 0
         ;;
       -v)
-        package_ver="$2"
+        # Split string into array with delimiter ':'
+        package_ver=(${2//:/ })
         shift 2
         ;;
       * )
@@ -154,15 +109,43 @@ main() {
   [[ ${#args[@]} == 0 ]] && usage && exit 1
   [[ ${#args[@]} < 2 ]] && die "Both <git-url> and <package> are required!"
 
-  # Check the format and exit on any failure
-  check_package_format "${args[1]}"
-  # Match the first : and extract vendor/pkg name
-  local vendor=${args[1]%%:*}
-  local pkg=${args[1]#*:}
+  local temp_dirs=()
+  local ref_dirs=()
+  local default_pkg_ver=${package_ver[0]}
+  for ((i=0; i<2; i++)) do
+    local pkg="${args[i]}"
+    local ver="${package_ver[i]}"
+    local protocol=$(protocol_of "$pkg")
+    local path=$(get_tmp_dir honest-XXXXXXXXXX)
 
-  fetch_repo "${args[0]}"
-  download_package $vendor $pkg $package_ver
-  vendor_diff $vendor $pkg "$REPO_PATH" "$PACKAGE_PATH"
+    [[ "$ver" == "" ]] && ver=$default_pkg_ver
+
+    # Create a temporary directory for extracting the package
+    mkdir -p "$path"
+    temp_dirs+=("$path")
+    [[ $protocol == "local" ]] && ref_dirs+=("$pkg") || ref_dirs+=("$path")
+
+    # Call protocol-specific helper to download/extract the package and create a metadata file
+    if $(in_array $protocol ${SUPPORTED_PROTOCOLS[@]}); then
+      info "Preparing '${pkg}'..."
+      honest-$protocol "$pkg" "$path" -v "$ver"
+      [[ $? != 0 ]] && die "Failed..."
+    else
+      die "Protocol '$protocol' is not supported yet"
+    fi
+  done
+
+  # Compare two projects and test its honesty
+  info "Calculating the honesty..."
+  is_honest ${args[1]} "${ref_dirs[0]}" "${ref_dirs[1]}"
+  if [[ $? == 0 ]]; then
+    info "OK, ${YELLOW}${args[1]#*:}${NC} is ${GREEN}Honest${NC}!"
+  else
+    info "NO, ${YELLOW}${args[1]#*:}${NC} is ${RED}Unhonest${NC}!"
+  fi
+
+  # Clean up the environment
+  rm -rf "${temp_dirs[@]}"
 }
 
 main "$@"
