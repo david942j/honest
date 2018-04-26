@@ -3,8 +3,6 @@ HONEST_VERSION="0.0.0"
 
 # Currently supported package vendors
 VENDORS=("gem")
-REPO_VENDORS=("github" "bitbucket" "gitlab")
-REPO_VENDORS_HOST=("github.com" "bitbucket.org" "gitlab.com")
 
 # Set log level to 1 if not set. The number can be 0(any) - 5,
 # representing - debug, info, warn, error, and fatal
@@ -83,31 +81,6 @@ check_package_format() {
   ( [[ "$vendor" == "" ]] || [[ "$pkg" == "" ]] ) && die "Vendor format error"
   # Check supported vendors
   ! in_array "$vendor" "${VENDORS[@]}" && die "Vendor '$vendor' is currently not supported"
-}
-
-#######################################
-# Check the format of repo name. Exit on any failure.
-# Globals:
-#   None
-# Arguments:
-#   <Repo> The repo name with format '<vendor>:<author>/<project>[@..]'
-# Returns:
-#   None
-#######################################
-check_repo_format() {
-  # Match the first : and extract vendor/pkg name
-  local vendor_author=${1%%/*}
-  local vendor=${vendor_author%%:*}
-  local author=${vendor_author#*:}
-  local proj=${1#*/}
-  local tag=$([[ "$1" == *"@"* ]] && echo ${1##*@} || echo "")
-
-  # Check format
-  [[ "$1" =~ ^http://*|^https://|^git:// ]] && return 0
-  [[ "$1" != *":"*"/"* ]] && die "Repo format error - missing separater ':' or '/'"
-  ( [[ "$vendor" == "" ]] || [[ "$author" == "" ]] || [[ "$proj" == "" ]] ) && die "Repo format error"
-  # Check supported vendors
-  ! in_array "$vendor" "${REPO_VENDORS[@]}" && die "Vendor of repo '$vendor' is currently not supported"
 }
 
 #######################################

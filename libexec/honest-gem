@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
-# Usage: honest-gem <command> [arguments...]
-#        honest-gem download one_gadget -v 1.4.1
+# Usage: honest-gem <package> <destination> [-v <version>]
+#        honest-gem one_gadget -v 1.4.1
 #
+
 
 # Compatibility to MAC
 [[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
@@ -24,27 +25,52 @@ extract() {
   set +e
 }
 
-download() {
-  local tmp_dir=$(get_tmp_dir honest-XXXXXXXXXX)
+main() {
+  # Parse arguments
+  while [[ "$1" != "" ]]; do
+    case "$1" in
+      -h|--help )
+        usage
+        exit 0
+        ;;
+      --version)
+        version
+        exit 0
+        ;;
+      -v)
+        package_ver="$2"
+        shift 2
+        ;;
+      * )
+        # Exit on argument starting with hyphen "-"
+        [[ "$1" == "-"* ]] && die "Unknown argument $1"
+        # Remember the string type arguments in the array
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
 
-  # Create directory if not exist
-  mkdir -p "$tmp_dir"
-  # Return the directory name to the caller
-  echo "$tmp_dir"
+  # Check # of input arguments after parsing the input arguments
+  [[ ${#args[@]} == 0 ]] && usage && exit 0
+  [[ ${#args[@]} < 2 ]] && die "Both <project> and <destination> are required!"
+  ! command_exist "gem" && die "Command 'gem' is not installed on your system"
+
+  # Check the format and exit on any failure
+  check_package_format "${args[0]}"
+
+  local package="${args[0]#*:}"
+  local path="${args[1]}"
 
   # Download package in the temp directory
-  local mesg="$(cd $tmp_dir && gem fetch --quiet $@ 2>&1)"
+  local mesg="$(cd $path && gem fetch $package -v "$package_ver" 2>&1)"
   [[ "$mesg" != "Downloaded "* ]] && die "$mesg"
 
   # Convert the string to <package name>.gem
   local name=$(remove_prefix "$mesg" "Downloaded ")".gem"
 
   # Go to temp directory and extract the file
-  (cd "$tmp_dir" && extract "$name")
+  (cd "$path" && extract "$name")
 }
 
-! command_exist "gem" && die "Command 'gem' is not installed on your system"
-[[ "$1" != "download" ]] && exit 1
-
-shift
-download $@
+main "$@"
