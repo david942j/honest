@@ -20,8 +20,11 @@ QUIET_MODE="0"
 source "$SCRIPT_DIR"/../share/honest/honest-common.sh
 
 #######################################
-# Convert <vendor>:<author>/<project>[@..] to https://<vendor's url>/<author>/<project>[@..]
-# When failed to convert the format, the original string will be returned.
+# Convert <vendor>:<author>/<project>[@..] to git repo format,
+# e.g. [http,https,git]://<vendor's host name>/<author>/<project>[@..]
+# The original string will be returned if:
+#   * failed to convert the format
+#   * the string is already in the repo format
 # Globals:
 #   None
 # Arguments:
@@ -35,8 +38,8 @@ abbr_form() {
   local repo=${1#*:}
   local index=$(get_index "$vendor" "${REPO_VENDORS[@]}")
 
-  if [[ "$1" == "https://"* ]]; then
-    # Return the original string if it's already in the format
+  if [[ "$1" =~ ^http://*|^https://|^git:// ]]; then
+    # Return the original string if it's already in the git format
     echo "$1"
   elif [[ "$index" != "-1" ]]; then
     # Return the URL if found
@@ -44,6 +47,7 @@ abbr_form() {
   else
     # Return the original string if fail to parse
     echo "$1"
+    return 1
   fi
   return 0
 }

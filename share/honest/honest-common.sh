@@ -103,7 +103,7 @@ check_repo_format() {
   local tag=$([[ "$1" == *"@"* ]] && echo ${1##*@} || echo "")
 
   # Check format
-  [[ "$1" == "https://"* ]] && return 0
+  [[ "$1" =~ ^http://*|^https://|^git:// ]] && return 0
   [[ "$1" != *":"*"/"* ]] && die "Repo format error - missing separater ':' or '/'"
   ( [[ "$vendor" == "" ]] || [[ "$author" == "" ]] || [[ "$proj" == "" ]] ) && die "Repo format error"
   # Check supported vendors
