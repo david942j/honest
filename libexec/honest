@@ -23,57 +23,17 @@
 #        If no branch/commit/tag is specified, the latest release(tag) will be used.
 #        With this behavior we can have the simplest usage of honest: `$ honest github:user/proj pip:proj`.
 
-set -E
+# Compatibility to MAC
+[[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
+
+SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
+# Import common functions and variables of honest
+source "$SCRIPT_DIR"/../share/honest/honest-common.sh
+
 # -------- Commonly used variables -------
-HONEST_VERSION="0.0.0"
-RED=''
-GREEN=''
-YELLOW=''
-NC=''
-if [[ -t 1 ]]; then
-  RED='\033[0;31m'
-  GREEN='\033[0;32m'
-  YELLOW='\033[0;33m'
-  NC='\033[0m' # No Color
-fi
-
-# -------- Basic functions --------
-version() {
-  echo "Honest Version $HONEST_VERSION"
-}
-
-usage() {
-  version
-  sed -ne '/^#/!q;s/.\{1,2\}//;1,2d;p' < "$0"
-  [ -z "$1" ] || exit "$1"
-}
-
-die() {
-  echo -e "[${RED}ERROR${NC}] $1"
-  exit 2
-}
-
-info() {
-  echo -e "[${GREEN}INFO${NC}] $1"
-}
-
-resolve_link() {
-  $(type -p greadlink readlink | head -1) "$1"
-}
-
-abs_dirname() {
-  local cwd="$(pwd)"
-  local path="$1"
-
-  while [ -n "$path" ]; do
-    cd "${path%/*}"
-    local name="${path##*/}"
-    path="$(resolve_link "$name" || true)"
-  done
-
-  pwd
-  cd "$cwd"
-}
+HONEST_ROOT="$SCRIPT_DIR"/..
+HONEST_SHARE="$HONEST_ROOT"/share/honest
+export PATH="$HONEST_ROOT/libexec:$PATH"
 
 HONEST_TMP_DIRS=()
 
@@ -85,129 +45,124 @@ push_tmp() {
   HONEST_TMP_DIRS+=("$1")
 }
 
-HONEST_LIBEXEC="$(abs_dirname "$0")"
-export HONEST_PREFIX="$(abs_dirname "$HONEST_LIBEXEC")"
-HONEST_SHARE="$HONEST_PREFIX"/share/honest
-export HONEST_CWD="$(abs_dirname .)"
-export PATH="$HONEST_LIBEXEC:$PATH"
-
-# -------- Option Parsing --------
-parse_options() {
-  getopt --test > /dev/null
-  if [[ $? -ne 4 ]]; then
-    echo "Please install gnu-getopt for Mac: \'brew install gnu-getopt\'"
-    exit 2
-  fi
-  local OPTIONS=hVv:
-  local LONGOPTIONS=help,version
-  PARSED_OPTIONS=$(getopt --options=$OPTIONS --longoptions=$LONGOPTIONS --name "$0" -- "$@")
-  if [[ $? -ne 0 ]]; then
-    exit 2
-  fi
-}
-
-if [[ $# -eq 0 ]]; then
-  usage 1
-fi
-
-parse_options "$@"
-eval set -- "$PARSED_OPTIONS"
-
-while true; do
-  case "$1" in
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    -V|--version)
-      version
-      exit 0
-      ;;
-    -v)
-      PACKAGE_VERSION="$2"
-      shift 2
-      ;;
-    --)
-      shift
-      break
-      ;;
-    *)
-      echo "Hey you forget to handle '$1'!"
-      exit 3
-      ;;
-  esac
-done
-
-if [[ $# -gt 2 ]]; then
-  usage
-  die "Too many arguments (given $#, expected 2)"
-elif [[ $# -ne 2 ]]; then
-  usage
-  die "You must give both <git-url> and <package>!"
-fi
-
-# -------- Download Sources --------
-
+#######################################
+# Download the git repo of a git package.
+# Globals:
+#   None
+# Arguments:
+#   <Package> The package name with format '<vendor>:<author>/<project>[@..]'
+# Returns:
+#   None
+#   Set global variable 'REPO_PATH'
+#######################################
 fetch_repo() {
   if [[ -d "$1" ]]; then
     REPO_PATH="$1"
+    info "Use local repo directory '$1'"
   else
+    info "Fetching the repo '$1'..."
     REPO_PATH="$(honest-clone "$1")"
-    [[ $? != 0 ]] && exit 1
+    [[ $? != 0 ]] && die "Fail on fetching repo '$1'"
     push_tmp "$REPO_PATH"
   fi
 }
 
-in_array() {
-  local e match="$1"
-  shift
-  for e; do [[ "$e" == "$match" ]] && return 0; done
-  return 1
-}
-
-# This function also sets $vendor and $pkg variable
+#######################################
+# Interface function for downloading packages from any vendors.
+# Globals:
+#   None
+# Arguments:
+#   <Vendor>
+#   <Package Name>
+#   [Package version] Optional package version specified by user
+# Returns:
+#   None
+#   Set global variable 'PACKAGE_PATH'
+#######################################
 download_package() {
-  local arg1="$1"
-  vendor=${arg1:0:3}
-  pkg=${arg1:4}
+  local cmd=()
+  local vendor=$1
+  local pkg=$2
+  local ver=$3
 
-  local cmd="honest-$vendor download $pkg"
-  # currently supported package vendors
-  vendors=("gem")
-  in_array "$vendor" "${vendors[@]}"
-  if [[ ${arg1:3:1} != ':' || $? -ne 0 ]]; then
-    usage
-    die "Invalid package name \"$arg1\", see examples."
-  fi
-  if [[ $# -ne 1 ]]; then
-    cmd+=" -v $2"
-  fi
-  PACKAGE_PATH="$($cmd)"
-  if [[ $? -ne 0 ]]; then
-    die "$PACKAGE_PATH"
-  fi
+  # Compile the command
+  cmd+=(honest-$vendor)
+  cmd+=(download $pkg)
+  [[ "$ver" != "" ]] && cmd+=(-v $ver)
+
+  # Execute the command and get the return string
+  info "Downloading the package '$pkg'..."
+  PACKAGE_PATH="$(${cmd[@]})"
+  [[ $? != 0 ]] && die "Fail on running '${cmd[@]}'"
   push_tmp "$PACKAGE_PATH"
 }
 
-download_package "$2" $PACKAGE_VERSION
-fetch_repo "$1"
-
 vendor_diff() {
-  if [[ "$vendor" == 'gem' ]]; then
-    # we have used gem.. so ruby must be installed
-    /usr/bin/env ruby "$HONEST_SHARE"/gem/diff.rb $@
-  else
-    exit 1
-  fi
+  local vendor=$1
+  local pkg=$2
+  local src=$3
+  local tgt=$4
+
+  info "Calculating the honesty..."
+  case "$vendor" in
+    gem )
+      /usr/bin/env ruby "$HONEST_SHARE"/gem/diff.rb $src $tgt
+      ;;
+    * )
+      die "Vendor '$vendor' is currently not supported"
+      ;;
+  esac
   if [[ $? -eq 0 ]]; then
     info "OK, ${YELLOW}$pkg${NC} is ${GREEN}Honest${NC}!"
     clear_tmp_dirs
   else
-    if [[ -t 1 ]]; then
-      (set -x; git diff --no-index --diff-filter=M "$REPO_PATH" "$PACKAGE_PATH"data)
-    fi
+    git --no-pager diff --no-index --diff-filter=M "$REPO_PATH" "$PACKAGE_PATH"/data
     info "NO, ${YELLOW}$pkg${NC} is ${RED}Unhonest${NC}!"
   fi
 }
 
-vendor_diff "$REPO_PATH" "$PACKAGE_PATH"
+main() {
+  local package_ver=""
+  local args=()
+
+  # Parse arguments
+  while [[ "$1" != "" ]]; do
+    case "$1" in
+      -h|--help )
+        usage
+        exit 0
+        ;;
+      -V|--version)
+        version
+        exit 0
+        ;;
+      -v)
+        package_ver="$2"
+        shift 2
+        ;;
+      * )
+        # Exit on argument starting with hyphen "-"
+        [[ "$1" == "-"* ]] && die "Unknown argument $1"
+        # Remember the string type arguments in the array
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  # Check # of input arguments after parsing the input arguments
+  [[ ${#args[@]} == 0 ]] && usage && exit 1
+  [[ ${#args[@]} < 2 ]] && die "Both <git-url> and <package> are required!"
+
+  # Check the format and exit on any failure
+  check_package_format "${args[1]}"
+  # Match the first : and extract vendor/pkg name
+  local vendor=${args[1]%%:*}
+  local pkg=${args[1]#*:}
+
+  fetch_repo "${args[0]}"
+  download_package $vendor $pkg $package_ver
+  vendor_diff $vendor $pkg "$REPO_PATH" "$PACKAGE_PATH"
+}
+
+main "$@"

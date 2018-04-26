@@ -1,83 +1,140 @@
 #!/usr/bin/env bash
 #
-# Usage: honest-clone <git-url>
-
+# Usage: honest-clone <git-url> [--quiet]
+#
+# Options:
+#        --quiet
+#               Hide all the output messages except the name of temp directory
+#
 # Git Url Parameter:
 #        <git-url> can be:
 #               - https://<git org>/<author>/<project>[@<branch|commit|tag>]
 #               - <github|bitbucket|gitlab>:<author>/<project>[@<branch|commit|tag>]
 
-die() {
-  local script_name=`basename "$0"`
-  echo "$script_name: $1"
-  exit 1
-}
+# Compatibility to MAC
+[[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
 
-usage() {
-  sed -ne '/^#/!q;s/.\{1,2\}//;1,2d;p' < "$0"
-  [ -z "$1" ] || exit "$1"
-}
+SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
+QUIET_MODE="0"
+# Import common functions and variables of honest
+source "$SCRIPT_DIR"/../share/honest/honest-common.sh
 
-is_start_with() {
-  [[ "$1" != "$2"* ]] && return 1
-  local str="$1"
-  RESULT="${str:${#2}}"
-}
-
+#######################################
+# Convert <vendor>:<author>/<project>[@..] to git repo format,
+# e.g. [http,https,git]://<vendor's host name>/<author>/<project>[@..]
+# The original string will be returned if:
+#   * failed to convert the format
+#   * the string is already in the repo format
+# Globals:
+#   None
+# Arguments:
+#   <Repo> The repo name with format '<vendor>:<author>/<project>[@..]'
+# Returns:
+#   None
+#   Echos the transformed string
+#######################################
 abbr_form() {
-  # check if url in form <vendor>:<author>/<project>[@..]
-  # if yes, convert it to https://<vendor's url>/<author>/<project>[@..]
-  local url="$1"
-  local vendor_map=("github" "github.com" "bitbucket" "bitbucket.org" "gitlab" "gitlab.com")
-  local n=${#vendor_map[@]}
-  for (( i=0; i<=$n; i+=2 )); do
-    is_start_with "$url" "${vendor_map[$i]}:"
-    if [[ $? -eq 0 ]]; then
-      RESULT="https://${vendor_map[$i+1]}/$RESULT"
-      return 0
-    fi
-  done
-  return 1
-}
+  local vendor=${1%%:*}
+  local repo=${1#*:}
+  local index=$(get_index "$vendor" "${REPO_VENDORS[@]}")
 
-get_tag() {
-  # scan for first '@'
-  # therefore, we don't support urls like 'https://author@github.com/author/proj'
-  local url="$1"
-  local n=${#url}
-  for (( i=0; i<=$n; i++ )); do
-    if [[ ${url:$i:1} == '@' ]]; then
-      REPO=${url:0:$i}
-      TAG=${url:$i+1}
-    fi
-  done
+  if [[ "$1" =~ ^http://*|^https://|^git:// ]]; then
+    # Return the original string if it's already in the git format
+    echo "$1"
+  elif [[ "$index" != "-1" ]]; then
+    # Return the URL if found
+    echo "https://${REPO_VENDORS_HOST[$index]}/$repo"
+  else
+    # Return the original string if fail to parse
+    echo "$1"
+    return 1
+  fi
   return 0
 }
 
-tmp_dir() {
-  # The behavior is a little different betwen Linux and macOS, but it's okay.
-  RESULT="$(TMPDIR=$HONEST_TMPDIR mktemp -d -t honest-XXXXXXXXXX)"
+#######################################
+# Parse the tag string from git URL string which can be
+# 'https://<author>@github.com/<author>/<repo>@v1.0.0'.
+# The tag string will be 'v1.00' in this case.
+# Globals:
+#   None
+# Arguments:
+#   <Repo> The repo name with format 'http(s)://URL[@..]'
+# Returns:
+#   None
+#   Echos the tag string; empty if not found
+#######################################
+get_tag_from_url() {
+  local url=${1#*//} # Remove string before //
+  local proj_path=${url#*/} # Remove string before the first /
+  local tag=$([[ "$proj_path" == *"@"* ]] && echo ${proj_path##*@} || echo "")
+
+  echo $tag
 }
 
-if [[ $# -ne 1 ]]; then
-  usage 1
-fi
-
-REPO="$1"
-abbr_form "$1"
-[[ $? -eq 0 ]] && REPO=$RESULT
-get_tag "$REPO"
-
-tmp_dir; path=$RESULT
-
-go_git() {
+git_clone() {
+  local url="$1"
+  local tag="$2"
+  local path="$3"
+  [[ "$QUIET_MODE" == "1" ]] && local extra_git_args="--quiet"
   set -e
-  git clone "$REPO" "$path"
+  # TODO Use shallow clone or other techniques to improve the speed
+  git clone $extra_git_args "$url" "$path"
   cd $path
-  # if $TAG is not present, checkout to the latest release.
-  TAG="${TAG:-$(git describe --tags `git rev-list --tags --max-count=1 2>/dev/null` 2>/dev/null)}"
-  [[ "$TAG" ]] && git checkout --detach "$TAG"
+  # if $tag is not present, checkout to the latest release.
+  tag="${tag:-$(git describe --tags `git rev-list --tags --max-count=1 2>/dev/null` 2>/dev/null)}"
+  [[ "$tag" != "" ]] && git checkout $extra_git_args --detach "$tag"
   set +e
 }
-go_git 1>/dev/null
-echo $path
+
+main() {
+  local args=()
+
+  # Parse arguments
+  while [[ "$1" != "" ]]; do
+    case "$1" in
+      -h|--help )
+        usage
+        exit 0
+        ;;
+      -V|--version)
+        version
+        exit 0
+        ;;
+      --quite)
+        QUIET_MODE="1"
+        shift
+        ;;
+      * )
+        # Exit on argument starting with hyphen "-"
+        [[ "$1" == "-"* ]] && die "Unknown argument $1"
+        # Remember the string type arguments in the array
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  [[ ${#args[@]} == 0 ]] && usage && exit 0
+  local repo="${args[0]}"
+
+  # Verify the input arguments
+  check_repo_format "$repo"
+
+  # Convert the format
+  local url=$(abbr_form "$repo")
+
+  # Retrieve the tag string from url
+  local tag=$(get_tag_from_url $url)
+
+  # Split the string into two parts, repo and tag iff the tag exists in url.
+  [[ "$tag" != "" ]] && url=${url%@*}
+
+  local path=$(get_tmp_dir honest-XXXXXXXXXX)
+  git_clone "$url" "$tag" "$path"
+
+  # Return the path to caller
+  echo "$path"
+}
+
+main "$@"
