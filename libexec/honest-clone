@@ -4,7 +4,7 @@
 #
 # Options:
 #        --quiet
-#               Hide the all the output messages except for the name of temp directory
+#               Hide all the output messages except the name of temp directory
 #
 # Git Url Parameter:
 #        <git-url> can be:
@@ -15,13 +15,13 @@
 [[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
 
 SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
-QUITE_MODE="0"
+QUIET_MODE="0"
 # Import common functions and variables of honest
 source "$SCRIPT_DIR"/../share/honest/honest-common.sh
 
 #######################################
 # Convert <vendor>:<author>/<project>[@..] to https://<vendor's url>/<author>/<project>[@..]
-# When failed to convert the format, the original string will be return.
+# When failed to convert the format, the original string will be returned.
 # Globals:
 #   None
 # Arguments:
@@ -50,12 +50,12 @@ abbr_form() {
 
 #######################################
 # Parse the tag string from git URL string which can be
-# 'https://<author>@github.com/<authors>/<repo>@v1.00'.
+# 'https://<author>@github.com/<author>/<repo>@v1.0.0'.
 # The tag string will be 'v1.00' in this case.
 # Globals:
 #   None
 # Arguments:
-#   <Repo> The repo name with format '<vendor>:<author>/<project>[@..]'
+#   <Repo> The repo name with format 'http(s)://URL[@..]'
 # Returns:
 #   None
 #   Echos the tag string; empty if not found
@@ -72,7 +72,7 @@ git_clone() {
   local url="$1"
   local tag="$2"
   local path="$3"
-  [[ "$QUITE_MODE" == "1" ]] && local extra_git_args="--quiet"
+  [[ "$QUIET_MODE" == "1" ]] && local extra_git_args="--quiet"
   set -e
   # TODO Use shallow clone or other techniques to improve the speed
   git clone $extra_git_args "$url" "$path"
@@ -98,7 +98,7 @@ main() {
         exit 0
         ;;
       --quite)
-        QUITE_MODE="1"
+        QUIET_MODE="1"
         shift
         ;;
       * )

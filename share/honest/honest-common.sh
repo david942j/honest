@@ -6,7 +6,7 @@ VENDORS=("gem")
 REPO_VENDORS=("github" "bitbucket" "gitlab")
 REPO_VENDORS_HOST=("github.com" "bitbucket.org" "gitlab.com")
 
-# Set log level to stderr if not set. The number can be 0(any) - 5,
+# Set log level to 1 if not set. The number can be 0(any) - 5,
 # representing - debug, info, warn, error, and fatal
 HONEST_LOGGING_LEVEL=${HONEST_LOGGING_LEVEL:-1}
 LOG_LEVEL_DEBUG=0
