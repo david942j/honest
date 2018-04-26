@@ -6,14 +6,14 @@ script=honest.bats
 @test "$script: version" {
   run honest --version
   [ "$status" -eq 0 ]
-  [ "${output:0:15}" = "Honest Version " ]
+  [ "${output:0:15}" = "Honest version " ]
 }
 
-@test "$script: invalid package" {
+@test "$script: invalid format" {
   run honest / wtf
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 1 ]
   result="${lines[${#lines[@]}-1]}"
-  [ "$result" = "[ERROR] Invalid package name \"wtf\", see examples." ]
+  [ "$result" = "[ERROR] Vendor format error - missing separater ':'" ]
 }
 
 @test "$script: one_gadget" {

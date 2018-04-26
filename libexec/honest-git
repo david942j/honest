@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+#
+# Usage: honest-git <repo> <destination> [-v <version>]
+#        honest-git download one_gadget -v 1.4.1
+#
+
+
+# Compatibility to MAC
+[[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
+
+SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
+# Import common functions and variables of honest
+source "$SCRIPT_DIR"/../share/honest/honest-common.sh
+
+REPO_VENDORS=("github" "bitbucket" "gitlab")
+REPO_VENDORS_HOST=("github.com" "bitbucket.org" "gitlab.com")
+
+
+#######################################
+# Check the format of repo name. Exit on any failure.
+# Globals:
+#   None
+# Arguments:
+#   <Repo> The repo name with format '<vendor>:<author>/<project>'
+# Returns:
+#   succeed:0 / failed:1
+#######################################
+check_repo_format() {
+  # Match the first : and extract vendor/pkg name
+  local vendor_author=${1%%/*}
+  local vendor=${vendor_author%%:*}
+  local author=${vendor_author#*:}
+  local proj=${1#*/}
+
+  # Check format
+  [[ "$1" =~ ^http://*|^https://|^git:// ]] && return 0
+  [[ "$1" != *":"*"/"* ]] && die "Repo format error - missing separater ':' or '/'"
+  ( [[ "$vendor" == "" ]] || [[ "$author" == "" ]] || [[ "$proj" == "" ]] ) && die "Repo format error"
+  # Check supported vendors
+  ! in_array "$vendor" "${REPO_VENDORS[@]}" && die "Vendor of repo '$vendor' is currently not supported"
+  return 0
+}
+
+#######################################
+# Convert <vendor>:<author>/<project>[@..] to git repo format,
+# e.g. [http,https,git]://<vendor's host name>/<author>/<project>[@..]
+# The original string will be returned if:
+#   * failed to convert the format
+#   * the string is already in the repo format
+# Globals:
+#   None
+# Arguments:
+#   <Repo> The repo name with format '<vendor>:<author>/<project>[@..]'
+# Returns:
+#   None
+#   Echos the transformed string
+#######################################
+abbr_form() {
+  local vendor=${1%%:*}
+  local repo=${1#*:}
+  local index=$(get_index "$vendor" "${REPO_VENDORS[@]}")
+
+  if [[ "$1" =~ ^http://*|^https://|^git:// ]]; then
+    # Return the original string if it's already in the git format
+    echo "$1"
+  elif [[ "$index" != "-1" ]]; then
+    # Return the URL if found
+    echo "https://${REPO_VENDORS_HOST[$index]}/$repo"
+  else
+    # Return the original string if fail to parse
+    echo "$1"
+    return 1
+  fi
+  return 0
+}
+
+git_clone() {
+  local url="$1"
+  local tag="$2"
+  local path="$3"
+  [[ "$QUIET_MODE" == "1" ]] && local extra_git_args="--quiet"
+  set -e
+  # TODO Use shallow clone or other techniques to improve the speed
+  git clone $extra_git_args "$url" "$path"
+  cd $path
+  # if $tag is not present, checkout to the latest release.
+  tag="${tag:-$(git describe --tags `git rev-list --tags --max-count=1 2>/dev/null` 2>/dev/null)}"
+  # Finally, match the tag string in the tag list, set to empty if not found
+  tag=$(git tag | grep "$tag" | head -n 1)
+  # The tag variable is now a tag or a commit number
+  git checkout $extra_git_args --detach "$tag"
+  set +e
+}
+
+main() {
+  # Parse arguments
+  while [[ "$1" != "" ]]; do
+    case "$1" in
+      -h|--help )
+        usage
+        exit 0
+        ;;
+      --version)
+        version
+        exit 0
+        ;;
+      -v)
+        package_ver="$2"
+        shift 2
+        ;;
+      * )
+        # Exit on argument starting with hyphen "-"
+        [[ "$1" == "-"* ]] && die "Unknown argument $1"
+        # Remember the string type arguments in the array
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  # Check # of input arguments after parsing the input arguments
+  [[ ${#args[@]} == 0 ]] && usage && exit 0
+  [[ ${#args[@]} < 2 ]] && die "Both <repo> and <destination> are required!"
+  ! command_exist "git" && die "Command 'git' is not installed on your system"
+
+  local repo="${args[0]}"
+  local path="${args[1]}"
+  local url=""
+
+  check_repo_format "$repo" && url=$(abbr_form "$repo")
+  git_clone "$url" "$package_ver" "$path"
+}
+
+main "$@"

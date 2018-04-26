@@ -1,52 +1,76 @@
 #!/usr/bin/env bash
 #
-# Usage: honest-gem <command> [arguments...]
-#        honest-gem download one_gadget -v 1.4.1
+# Usage: honest-gem <package> <destination> [-v <version>]
+#        honest-gem one_gadget -v 1.4.1
 #
 
-# TODO: check command 'gem' exists
 
-die() {
-  local script_name=`basename "$0"`
-  echo "$script_name: $1"
-  exit 1
-}
+# Compatibility to MAC
+[[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
 
-cut_head() {
-  if [[ "$1" != "$2"* ]]; then
-    return 1
-  fi
-  local str="$1"
-  RESULT="${str:${#2}}"
-}
+SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
+# Import common functions and variables of honest
+source "$SCRIPT_DIR"/../share/honest/honest-common.sh
 
-tmp_dir() {
-  # The behavior is a little different betwen Linux and macOS, but it's okay.
-  RESULT="$(TMPDIR=$HONEST_TMPDIR mktemp -d -t honest-XXXXXXXXXX)"
-}
+extract() {
+  set -e
 
-download() {
-  name="$(gem fetch --quiet $@ 2>&1)"
-  cut_head "$name" "Downloaded "
-  if [[ $? -ne 0 ]]; then
-    die "$name"
-  fi
-  name="$RESULT.gem"
-  tmp_dir; tmp="$RESULT"
-  mv "$name" "$tmp/"
-  cd "$tmp"
-  tar xf "$name"
+  tar -xf "$1"
   # TODO: check contains exactly three files
   gunzip metadata.gz
-  mkdir data
-  tar xzf data.tar.gz -C data
-  RESULT="$tmp/"
+
+  mkdir -p data
+  tar -xzf data.tar.gz -C data
+
+  set +e
 }
 
-if [[ "$1" == 'download' ]]; then
-  shift
-  download $@
-  echo "$RESULT"
-else
-  exit 1
-fi
+main() {
+  # Parse arguments
+  while [[ "$1" != "" ]]; do
+    case "$1" in
+      -h|--help )
+        usage
+        exit 0
+        ;;
+      --version)
+        version
+        exit 0
+        ;;
+      -v)
+        package_ver="$2"
+        shift 2
+        ;;
+      * )
+        # Exit on argument starting with hyphen "-"
+        [[ "$1" == "-"* ]] && die "Unknown argument $1"
+        # Remember the string type arguments in the array
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  # Check # of input arguments after parsing the input arguments
+  [[ ${#args[@]} == 0 ]] && usage && exit 0
+  [[ ${#args[@]} < 2 ]] && die "Both <project> and <destination> are required!"
+  ! command_exist "gem" && die "Command 'gem' is not installed on your system"
+
+  # Check the format and exit on any failure
+  check_package_format "${args[0]}"
+
+  local package="${args[0]#*:}"
+  local path="${args[1]}"
+
+  # Download package in the temp directory
+  local mesg="$(cd $path && gem fetch $package -v "$package_ver" 2>&1)"
+  [[ "$mesg" != "Downloaded "* ]] && die "$mesg"
+
+  # Convert the string to <package name>.gem
+  local name=$(remove_prefix "$mesg" "Downloaded ")".gem"
+
+  # Go to temp directory and extract the file
+  (cd "$path" && extract "$name")
+}
+
+main "$@"

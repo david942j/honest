@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 #
-# Usage: honest [-h/--help] [-V/--version]
+# Usage: honest [-h/--help] [--version]
 #               <git-url>
-#               <package> [-v=]
+#               <package> [-v=A[:B]] <---  [@<branch|commit|tag>]
+#
 # Examples:
 #        honest --version
 #        honest github:david942j/one_gadget gem:one_gadget
-#        honest https://github.com/pypa/setuptools@v39.0.1 pip:setuptools -v 39.0.1
+#        honest https://github.com/pypa/setuptools pip:setuptools -v 39.0.1:39.0.1
 #        honest ~/path_on_my_laptop/seccomp-tools gem:seccomp-tools -v 1.2.0
 #
 # Options:
@@ -18,196 +19,133 @@
 # Git Url Parameter:
 #        <git-url> can be:
 #               - A relative/absolute path.
-#               - https://<git org>/<author>/<project>[@<branch|commit|tag>]
-#               - <github|bitbucket|gitlab>:<author>/<project>[@<branch|commit|tag>]
+#               - https://<git org>/<author>/<project>
+#               - <github|bitbucket|gitlab>:<author>/<project>
 #        If no branch/commit/tag is specified, the latest release(tag) will be used.
 #        With this behavior we can have the simplest usage of honest: `$ honest github:user/proj pip:proj`.
 
-set -E
+# Compatibility to MAC
+[[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
+
+SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
+# Import common functions and variables of honest
+source "$SCRIPT_DIR"/../share/honest/honest-common.sh
+
 # -------- Commonly used variables -------
-HONEST_VERSION="0.0.0"
-RED=''
-GREEN=''
-YELLOW=''
-NC=''
-if [[ -t 1 ]]; then
-  RED='\033[0;31m'
-  GREEN='\033[0;32m'
-  YELLOW='\033[0;33m'
-  NC='\033[0m' # No Color
-fi
+HONEST_ROOT="$SCRIPT_DIR"/..
+HONEST_SHARE="$HONEST_ROOT"/share/honest
+export PATH="$HONEST_ROOT/libexec:$PATH"
 
-# -------- Basic functions --------
-version() {
-  echo "Honest Version $HONEST_VERSION"
-}
+SUPPORTED_PROTOCOLS=(local git gem)
 
-usage() {
-  version
-  sed -ne '/^#/!q;s/.\{1,2\}//;1,2d;p' < "$0"
-  [ -z "$1" ] || exit "$1"
-}
-
-die() {
-  echo -e "[${RED}ERROR${NC}] $1"
-  exit 2
-}
-
-info() {
-  echo -e "[${GREEN}INFO${NC}] $1"
-}
-
-resolve_link() {
-  $(type -p greadlink readlink | head -1) "$1"
-}
-
-abs_dirname() {
-  local cwd="$(pwd)"
-  local path="$1"
-
-  while [ -n "$path" ]; do
-    cd "${path%/*}"
-    local name="${path##*/}"
-    path="$(resolve_link "$name" || true)"
-  done
-
-  pwd
-  cd "$cwd"
-}
-
-HONEST_TMP_DIRS=()
-
-clear_tmp_dirs() {
-  rm -fr "${HONEST_TMP_DIRS[@]}"
-}
-
-push_tmp() {
-  HONEST_TMP_DIRS+=("$1")
-}
-
-HONEST_LIBEXEC="$(abs_dirname "$0")"
-export HONEST_PREFIX="$(abs_dirname "$HONEST_LIBEXEC")"
-HONEST_SHARE="$HONEST_PREFIX"/share/honest
-export HONEST_CWD="$(abs_dirname .)"
-export PATH="$HONEST_LIBEXEC:$PATH"
-
-# -------- Option Parsing --------
-parse_options() {
-  getopt --test > /dev/null
-  if [[ $? -ne 4 ]]; then
-    echo "Please install gnu-getopt for Mac: \'brew install gnu-getopt\'"
-    exit 2
-  fi
-  local OPTIONS=hVv:
-  local LONGOPTIONS=help,version
-  PARSED_OPTIONS=$(getopt --options=$OPTIONS --longoptions=$LONGOPTIONS --name "$0" -- "$@")
-  if [[ $? -ne 0 ]]; then
-    exit 2
-  fi
-}
-
-if [[ $# -eq 0 ]]; then
-  usage 1
-fi
-
-parse_options "$@"
-eval set -- "$PARSED_OPTIONS"
-
-while true; do
+protocol_of() {
   case "$1" in
-    -h|--help)
-      usage
-      exit 0
+    http://*|https://*|git* )  echo "git" ;;
+    gem:* ) echo "gem" ;;
+    #pip:* ) echo "pip" ;;
+  esac
+  [[ -d "$1" ]] && echo "local"
+}
+
+is_honest() {
+  local vendor=${1%%:*}
+  local pkg_name=${1#*:}
+  local repo_path=$2
+  local pkg_path=$3
+  local ret=0
+
+  case "$vendor" in
+    gem )
+      /usr/bin/env ruby "$HONEST_SHARE"/gem/diff.rb "$repo_path" "$pkg_path"
+      ret=$?
       ;;
-    -V|--version)
-      version
-      exit 0
-      ;;
-    -v)
-      PACKAGE_VERSION="$2"
-      shift 2
-      ;;
-    --)
-      shift
-      break
-      ;;
-    *)
-      echo "Hey you forget to handle '$1'!"
-      exit 3
+    * )
+      die "Vendor '$vendor' is currently not supported"
       ;;
   esac
-done
 
-if [[ $# -gt 2 ]]; then
-  usage
-  die "Too many arguments (given $#, expected 2)"
-elif [[ $# -ne 2 ]]; then
-  usage
-  die "You must give both <git-url> and <package>!"
-fi
-
-# -------- Download Sources --------
-
-fetch_repo() {
-  if [[ -d "$1" ]]; then
-    REPO_PATH="$1"
-  else
-    REPO_PATH="$(honest-clone "$1")"
-    [[ $? != 0 ]] && exit 1
-    push_tmp "$REPO_PATH"
+  # Show the differences
+  if [[ $ret != 0 ]]; then
+    git --no-pager diff --no-index --diff-filter=M "$repo_path" "$pkg_path"/data
   fi
+
+  return $ret
 }
 
-in_array() {
-  local e match="$1"
-  shift
-  for e; do [[ "$e" == "$match" ]] && return 0; done
-  return 1
-}
+# A dummy function
+honest-local() { return 0; }
 
-# This function also sets $vendor and $pkg variable
-download_package() {
-  local arg1="$1"
-  vendor=${arg1:0:3}
-  pkg=${arg1:4}
+main() {
+  local package_ver=()
+  local args=()
 
-  local cmd="honest-$vendor download $pkg"
-  # currently supported package vendors
-  vendors=("gem")
-  in_array "$vendor" "${vendors[@]}"
-  if [[ ${arg1:3:1} != ':' || $? -ne 0 ]]; then
-    usage
-    die "Invalid package name \"$arg1\", see examples."
-  fi
-  if [[ $# -ne 1 ]]; then
-    cmd+=" -v $2"
-  fi
-  PACKAGE_PATH="$($cmd)"
-  if [[ $? -ne 0 ]]; then
-    die "$PACKAGE_PATH"
-  fi
-  push_tmp "$PACKAGE_PATH"
-}
+  # Parse arguments
+  while [[ "$1" != "" ]]; do
+    case "$1" in
+      -h|--help )
+        usage
+        exit 0
+        ;;
+      --version)
+        version
+        exit 0
+        ;;
+      -v)
+        # Split string into array with delimiter ':'
+        package_ver=(${2//:/ })
+        shift 2
+        ;;
+      * )
+        # Exit on argument starting with hyphen "-"
+        [[ "$1" == "-"* ]] && die "Unknown argument $1"
+        # Remember the string type arguments in the array
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
 
-download_package "$2" $PACKAGE_VERSION
-fetch_repo "$1"
+  # Check # of input arguments after parsing the input arguments
+  [[ ${#args[@]} == 0 ]] && usage && exit 1
+  [[ ${#args[@]} < 2 ]] && die "Both <git-url> and <package> are required!"
 
-vendor_diff() {
-  if [[ "$vendor" == 'gem' ]]; then
-    # we have used gem.. so ruby must be installed
-    /usr/bin/env ruby "$HONEST_SHARE"/gem/diff.rb $@
-  else
-    exit 1
-  fi
-  if [[ $? -eq 0 ]]; then
-    info "OK, ${YELLOW}$pkg${NC} is ${GREEN}Honest${NC}!"
-    clear_tmp_dirs
-  else
-    if [[ -t 1 ]]; then
-      (set -x; git diff --no-index --diff-filter=M "$REPO_PATH" "$PACKAGE_PATH"data)
+  local temp_dirs=()
+  local ref_dirs=()
+  local default_pkg_ver=${package_ver[0]}
+  for ((i=0; i<2; i++)) do
+    local pkg="${args[i]}"
+    local ver="${package_ver[i]}"
+    local protocol=$(protocol_of "$pkg")
+    local path=$(get_tmp_dir honest-XXXXXXXXXX)
+
+    [[ "$ver" == "" ]] && ver=$default_pkg_ver
+
+    # Create a temporary directory for extracting the package
+    mkdir -p "$path"
+    temp_dirs+=("$path")
+    [[ $protocol == "local" ]] && ref_dirs+=("$pkg") || ref_dirs+=("$path")
+
+    # Call protocol-specific helper to download/extract the package and create a metadata file
+    if $(in_array $protocol ${SUPPORTED_PROTOCOLS[@]}); then
+      info "Preparing '${pkg}'..."
+      honest-$protocol "$pkg" "$path" -v "$ver"
+      [[ $? != 0 ]] && die "Failed..."
+    else
+      die "Protocol '$protocol' is not supported yet"
     fi
-    info "NO, ${YELLOW}$pkg${NC} is ${RED}Unhonest${NC}!"
+  done
+
+  # Compare two projects and test its honesty
+  info "Calculating the honesty..."
+  is_honest ${args[1]} "${ref_dirs[0]}" "${ref_dirs[1]}"
+  if [[ $? == 0 ]]; then
+    info "OK, ${YELLOW}${args[1]#*:}${NC} is ${GREEN}Honest${NC}!"
+  else
+    info "NO, ${YELLOW}${args[1]#*:}${NC} is ${RED}Unhonest${NC}!"
   fi
+
+  # Clean up the environment
+  rm -rf "${temp_dirs[@]}"
 }
 
-vendor_diff "$REPO_PATH" "$PACKAGE_PATH"
+main "$@"
