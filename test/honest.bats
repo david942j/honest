@@ -13,11 +13,11 @@ script=honest.bats
   run honest / wtf
   [ "$status" -eq 1 ]
   result="${lines[${#lines[@]}-1]}"
-  [ "$result" = "[ERROR] Vendor format error - missing separater ':'" ]
+  [ "$result" = "[ERROR] Protocol '' is not supported yet" ]
 }
 
 @test "$script: one_gadget" {
-  run honest github:david942j/one_gadget@v1.5.0 gem:one_gadget -v 1.5.0
+  run honest github:david942j/one_gadget gem:one_gadget -v 1.5.0
   [ "$status" -eq 0 ]
   result="${lines[${#lines[@]}-1]}"
   [ "$result" = "[INFO] OK, one_gadget is Honest!" ]

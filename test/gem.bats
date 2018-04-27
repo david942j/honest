@@ -5,12 +5,13 @@ script=gem.bats
 
 @test "$script: unexist gem" {
   [ -z "$CI"] && skip "fetching unexist gem takes long time.."
-  run honest-gem download _this_gem_should_never_exist_
+  run honest-gem _this_gem_should_never_exist_ $(helper_make_tmp_dir)
   [ "$status" -eq 1 ]
-  [ "${lines[1]}" = "[ERROR] ERROR:  Could not find a valid gem '_this_gem_should_never_exist_' (>= 0) in any repository" ]
+  [ "${lines[0]}" = "[ERROR] Vendor format error - missing separater ':'" ]
 }
 @test "$script: one_gadget" {
-  run honest-gem download one_gadget
+  tmp_dir=$(helper_make_tmp_dir)
+  run honest-gem gem:one_gadget $tmp_dir
   [ "$status" -eq 0 ]
-  [ -f "$output/metadata" ]
+  [ -f "$tmp_dir/metadata" ]
 }
