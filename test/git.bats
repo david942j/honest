@@ -4,7 +4,8 @@ load test_helper
 script=git.bats
 
 setup() {
-  [ -z "$CI"] && skip "No git test on local"
+  [ -z "$CI" ] && skip "No git test on local"
+  return 0
 }
 
 @test "$script: latest tag" {
