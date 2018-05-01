@@ -37,6 +37,13 @@ $ honest github:david942j/one_gadget gem:one_gadget
 # [INFO] OK, one_gadget is Honest!
 ```
 
+You can specify a version:
+```bash
+honest github:bbatsov/rubocop gem:rubocop -v 0.55.0
+# [INFO] OK, rubocop is Honest!
+```
+
+
 #### See help for more details
 
 ```bash
@@ -45,7 +52,7 @@ SHELL_OUTPUT_OF(honest)
 
 ## Screenshots
 
-![honest gem](https://github.com/david942j/honest/blob/master/screenshots/one_gadget.png?raw=true)
+![honest gem](https://github.com/david942j/honest/blob/master/screenshots/rubocop.png?raw=true)
 
 ## Supported Package Manager
 

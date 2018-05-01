@@ -37,39 +37,48 @@ $ honest github:david942j/one_gadget gem:one_gadget
 # [INFO] OK, one_gadget is Honest!
 ```
 
+You can specify a version:
+```bash
+honest github:bbatsov/rubocop gem:rubocop -v 0.55.0
+# [INFO] OK, rubocop is Honest!
+```
+
+
 #### See help for more details
 
 ```bash
 $ honest
-# Honest Version 0.0.0
-# Usage: honest [-h/--help] [-V/--version]
+# Honest version 0.0.0
+# Usage: honest [-h/--help] [--version]
 #               <git-url>
-#               <package> [-v=]
+#               <package> [-v version[:version]]
+#
 # Examples:
 #        honest --version
 #        honest github:david942j/one_gadget gem:one_gadget
-#        honest https://github.com/pypa/setuptools@v39.0.1 pip:setuptools -v 39.0.1
+#        honest github:david942j/one_gadget gem:one_gadget -v master:1.6.0
+#        honest https://github.com/pypa/setuptools pip:setuptools -v 39.0.1
 #        honest ~/path_on_my_laptop/seccomp-tools gem:seccomp-tools -v 1.2.0
 #
 # Options:
 #        -h, --help
 #               Show this usage.
-#        -V, --version
+#        --version
 #               Display version information and exit.
 #
 # Git Url Parameter:
 #        <git-url> can be:
-#               - A relative/absolute path.
-#               - https://<git org>/<author>/<project>[@<branch|commit|tag>]
-#               - <github|bitbucket|gitlab>:<author>/<project>[@<branch|commit|tag>]
-#        If no branch/commit/tag is specified, the latest release(tag) will be used.
+#               - A relative/absolute path
+#               - An url like https://<git host>/<author>/<project>
+#               - <github|bitbucket|gitlab>:<author>/<project>
+#        If no branch/commit/tag is specified in the `-v` option, the latest release(tag) will be used.
 #        With this behavior we can have the simplest usage of honest: `$ honest github:user/proj pip:proj`.
 
 ```
 
 ## Screenshots
 
-![honest gem](https://github.com/david942j/honest/blob/master/screenshots/one_gadget.png?raw=true)
+![honest gem](https://github.com/david942j/honest/blob/master/screenshots/rubocop.png?raw=true)
 
 ## Supported Package Manager
 
