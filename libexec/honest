@@ -2,26 +2,27 @@
 #
 # Usage: honest [-h/--help] [--version]
 #               <git-url>
-#               <package> [-v=A[:B]] <---  [@<branch|commit|tag>]
+#               <package> [-v version[:version]]
 #
 # Examples:
 #        honest --version
 #        honest github:david942j/one_gadget gem:one_gadget
-#        honest https://github.com/pypa/setuptools pip:setuptools -v 39.0.1:39.0.1
+#        honest github:david942j/one_gadget gem:one_gadget -v master:1.6.0
+#        honest https://github.com/pypa/setuptools pip:setuptools -v 39.0.1
 #        honest ~/path_on_my_laptop/seccomp-tools gem:seccomp-tools -v 1.2.0
 #
 # Options:
 #        -h, --help
 #               Show this usage.
-#        -V, --version
+#        --version
 #               Display version information and exit.
 #
 # Git Url Parameter:
 #        <git-url> can be:
-#               - A relative/absolute path.
-#               - https://<git org>/<author>/<project>
+#               - A relative/absolute path
+#               - An url like https://<git host>/<author>/<project>
 #               - <github|bitbucket|gitlab>:<author>/<project>
-#        If no branch/commit/tag is specified, the latest release(tag) will be used.
+#        If no branch/commit/tag is specified in the `-v` option, the latest release(tag) will be used.
 #        With this behavior we can have the simplest usage of honest: `$ honest github:user/proj pip:proj`.
 
 # Compatibility to MAC
@@ -43,13 +44,14 @@ protocol_of() {
     http://*|https://*|git* )  echo "git" ;;
     gem:* ) echo "gem" ;;
     pip:* ) echo "pip" ;;
+    * )
+      [[ -d "$1" ]] && echo "local" && return 0
+      echo "${1%%:*}"
   esac
-  [[ -d "$1" ]] && echo "local"
 }
 
 is_honest() {
   local vendor=${1%%:*}
-  local pkg_name=${1#*:}
   local repo_path=$2
   local pkg_path=$3
   local ret=0
@@ -125,13 +127,13 @@ main() {
     temp_dirs+=("$path")
     [[ $protocol == "local" ]] && ref_dirs+=("$pkg") || ref_dirs+=("$path")
 
-    # Call protocol-specific helper to download/extract the package and create a metadata file
+    # Call protocol-specific helper to download/extract the package
     if $(in_array $protocol ${SUPPORTED_PROTOCOLS[@]}); then
       info "Preparing '${pkg}'..."
       honest-$protocol "$pkg" "$path" -v "$ver"
       [[ $? != 0 ]] && die "Failed..."
     else
-      die "Protocol '$protocol' is not supported yet"
+      die "Protocol '$protocol' is not supported"
     fi
   done
 

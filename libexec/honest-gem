@@ -2,8 +2,6 @@
 #
 # Usage: honest-gem <package> <destination> [-v <version>]
 #        honest-gem one_gadget -v 1.4.1
-#
-
 
 # Compatibility to MAC
 [[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
@@ -63,7 +61,7 @@ main() {
   local path="${args[1]}"
 
   # Download package in the temp directory
-  local mesg="$(cd $path && gem fetch $package -v "$package_ver" 2>&1)"
+  local mesg="$(cd "$path" && gem fetch $package -v "$package_ver" 2>&1)"
   [[ "$mesg" != "Downloaded "* ]] && die "$mesg"
 
   # Convert the string to <package name>.gem

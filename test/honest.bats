@@ -10,10 +10,10 @@ script=honest.bats
 }
 
 @test "$script: invalid format" {
-  run honest / wtf
+  run honest / wtf:orz
   [ "$status" -eq 1 ]
   result="${lines[${#lines[@]}-1]}"
-  [ "$result" = "[ERROR] Protocol '' is not supported yet" ]
+  [ "$result" = "[ERROR] Protocol 'wtf' is not supported" ]
 }
 
 @test "$script: one_gadget" {
