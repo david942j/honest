@@ -8,7 +8,7 @@
 
 SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
 # Import common functions and variables of honest
-source "$SCRIPT_DIR"/../share/honest/honest-common.sh
+source "$SCRIPT_DIR"/../share/honest/common.sh
 
 REPO_VENDORS=("github" "bitbucket" "gitlab")
 REPO_VENDORS_HOST=("github.com" "bitbucket.org" "gitlab.com")
