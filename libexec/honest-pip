@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Usage: honest-gem gem:<package> <destination> [-v <version>]
-#        honest-gem gem:one_gadget /tmp/gem -v 1.4.1
+# Usage: honest-pip pip:<package> <destination> [-v <version>]
+#        honest-pip pip:requests /tmp/pip -v 39.0.1
 
 # Compatibility to MAC
 [[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
@@ -12,14 +12,8 @@ source "$SCRIPT_DIR"/../share/honest/common.sh
 
 extract() {
   set -e
-
-  tar -xf "$1"
-  # TODO: check contains exactly three files
-  gunzip metadata.gz
-
-  mkdir -p data
-  tar -xzf data.tar.gz -C data
-
+  # TODO(david942j): check all probably file format,
+  #                  currently known: .whl(zip), .tar.gz
   set +e
 }
 
@@ -51,24 +45,27 @@ main() {
 
   # Check # of input arguments after parsing the input arguments
   [[ ${#args[@]} == 0 ]] && usage && exit 0
-  [[ ${#args[@]} < 2 ]] && die "Both <package> and <destination> are required!"
-  ! command_exist "gem" && die "Command 'gem' is not installed on your system"
+  [[ ${#args[@]} < 2 ]] && die "Both <project> and <destination> are required!"
+  ! command_exist "pip" && die "Command 'pip' is not installed on your system"
 
   # Check the format and exit on any failure
   check_package_format "${args[0]}"
 
   local package="${args[0]#*:}"
   local path="${args[1]}"
+  local target="$package"
+  [[ "$package_ver" != "" ]] && target+="==$package_ver"
 
   # Download package in the temp directory
-  local mesg="$(cd "$path" && gem fetch $package -v "$package_ver" 2>&1)"
-  [[ "$mesg" != "Downloaded "* ]] && die "$mesg"
+  local mesg=$(pip download --no-deps -d "$path" "$target" 2>&1)
+  [[ "$mesg" != *"Successfully downloaded "* ]] && die "$mesg"
 
-  # Convert the string to <package name>.gem
-  local name=$(remove_prefix "$mesg" "Downloaded ")".gem"
+  # Get the filename.
+  local name=$(echo -e "$mesg" | sed -n -e 's/^.*Saved //p')
 
   # Go to temp directory and extract the file
   (cd "$path" && extract "$name")
 }
 
 main "$@"
+

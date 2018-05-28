@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 #
 # Usage: honest [-h/--help] [--version]
-#               <git-url>
-#               <package> [-v version[:version]]
+#               <git-url> <package> [-v version[:version]]
 #
 # Examples:
 #        honest --version
@@ -37,7 +36,8 @@ HONEST_ROOT="$SCRIPT_DIR"/..
 HONEST_SHARE="$HONEST_ROOT"/share/honest
 export PATH="$HONEST_ROOT/libexec:$PATH"
 
-SUPPORTED_PROTOCOLS=(local git gem)
+SUPPORTED_PROTOCOLS=(local git)
+SUPPORTED_PROTOCOLS+=( "${SUPPORTED_VENDORS[@]}" )
 
 protocol_of() {
   case "$1" in
@@ -59,6 +59,10 @@ is_honest() {
   case "$vendor" in
     gem )
       /usr/bin/env ruby "$HONEST_SHARE"/gem/diff.rb "$repo_path" "$pkg_path"
+      ret=$?
+      ;;
+    pip )
+      echo 'TODO';
       ret=$?
       ;;
     * )

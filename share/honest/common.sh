@@ -2,7 +2,7 @@
 HONEST_VERSION="0.0.0"
 
 # Currently supported package vendors
-VENDORS=("gem")
+SUPPORTED_VENDORS=(gem pip)
 
 # Set log level to 1 if not set. The number can be 0(any) - 5,
 # representing - debug, info, warn, error, and fatal
@@ -80,7 +80,7 @@ check_package_format() {
   [[ "$1" != *":"* ]] && die "Vendor format error - missing separater ':'"
   ( [[ "$vendor" == "" ]] || [[ "$pkg" == "" ]] ) && die "Vendor format error"
   # Check supported vendors
-  ! in_array "$vendor" "${VENDORS[@]}" && die "Vendor '$vendor' is currently not supported"
+  ! in_array "$vendor" "${SUPPORTED_VENDORS[@]}" && die "Vendor '$vendor' is currently not supported"
 }
 
 #######################################
