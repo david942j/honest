@@ -24,7 +24,7 @@
 #        If no branch/commit/tag is specified in the `-v` option, the latest release(tag) will be used.
 #        With this behavior we can have the simplest usage of honest: `$ honest github:user/proj pip:proj`.
 
-# Compatibility to MAC
+# Compatibility to macOS
 [[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
 
 SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
@@ -118,6 +118,15 @@ main() {
   local temp_dirs=()
   local ref_dirs=()
   local default_pkg_ver=${package_ver[0]}
+  # Check protocal first, this prevents finding wrong package format
+  # after the long-long-time git cloning.
+  for ((i=0; i<2; i++)) do
+    local protocol=$(protocol_of "${args[i]}")
+    if ! $(in_array $protocol ${SUPPORTED_PROTOCOLS[@]}); then
+      die "Protocol '$protocol' is not supported"
+    fi
+  done
+
   for ((i=0; i<2; i++)) do
     local pkg="${args[i]}"
     local ver="${package_ver[i]}"
@@ -132,13 +141,9 @@ main() {
     [[ $protocol == "local" ]] && ref_dirs+=("$pkg") || ref_dirs+=("$path")
 
     # Call protocol-specific helper to download/extract the package
-    if $(in_array $protocol ${SUPPORTED_PROTOCOLS[@]}); then
-      info "Preparing '${pkg}'..."
-      honest-$protocol "$pkg" "$path" -v "$ver"
-      [[ $? != 0 ]] && die "Failed..."
-    else
-      die "Protocol '$protocol' is not supported"
-    fi
+    info "Preparing '${pkg}'..."
+    honest-$protocol "$pkg" "$path" -v "$ver"
+    [[ $? != 0 ]] && die "Failed..."
   done
 
   # Compare two projects and test its honesty

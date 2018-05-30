@@ -3,7 +3,7 @@
 # Usage: honest-gem gem:<package> <destination> [-v <version>]
 #        honest-gem gem:one_gadget /tmp/gem -v 1.4.1
 
-# Compatibility to MAC
+# Compatibility to macOS
 [[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
 
 SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"

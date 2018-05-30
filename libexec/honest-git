@@ -3,7 +3,7 @@
 # Usage: honest-git <repo> <destination> [-v <version>]
 #        honest-git github:david942j/honest /tmp/repo -v master
 
-# Compatibility to MAC
+# Compatibility to macOS
 [[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
 
 SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
