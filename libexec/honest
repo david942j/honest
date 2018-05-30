@@ -62,7 +62,7 @@ is_honest() {
       ret=$?
       ;;
     pip )
-      echo 'TODO';
+      /usr/bin/env python "$HONEST_SHARE"/pip/diff.py "$repo_path" "$pkg_path"
       ret=$?
       ;;
     * )

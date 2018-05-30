@@ -40,7 +40,7 @@ main() {
   [[ "$package_ver" != "" ]] && target+="==$package_ver"
 
   # Download package in the temp directory
-  local mesg=$(pip download --no-deps -d "$path" "$target" 2>&1)
+  local mesg=$(cd "$path" && pip download --no-deps -d "$path" "$target" 2>&1)
   [[ "$mesg" != *"Successfully downloaded "* ]] && die "$mesg"
 
   # Get the filename.

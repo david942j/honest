@@ -9,6 +9,7 @@ script=gem.bats
   [ "$status" -eq 1 ]
   [ "${lines[0]}" = "[ERROR] Vendor format error - missing separater ':'" ]
 }
+
 @test "$script: one_gadget" {
   tmp_dir=$(helper_make_tmp_dir)
   run honest-gem gem:one_gadget $tmp_dir
