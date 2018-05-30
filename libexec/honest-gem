@@ -24,44 +24,11 @@ extract() {
 }
 
 main() {
-  # Parse arguments
-  while [[ "$1" != "" ]]; do
-    case "$1" in
-      -h|--help )
-        usage
-        exit 0
-        ;;
-      --version)
-        version
-        exit 0
-        ;;
-      -v)
-        package_ver="$2"
-        shift 2
-        ;;
-      * )
-        # Exit on argument starting with hyphen "-"
-        [[ "$1" == "-"* ]] && die "Unknown argument $1"
-        # Remember the string type arguments in the array
-        args+=("$1")
-        shift
-        ;;
-    esac
-  done
-
-  # Check # of input arguments after parsing the input arguments
-  [[ ${#args[@]} == 0 ]] && usage && exit 0
-  [[ ${#args[@]} < 2 ]] && die "Both <package> and <destination> are required!"
   ! command_exist "gem" && die "Command 'gem' is not installed on your system"
 
-  # Check the format and exit on any failure
-  check_package_format "${args[0]}"
-
-  local package="${args[0]#*:}"
-  local path="${args[1]}"
-
+  vendor_option_parser "$@"
   # Download package in the temp directory
-  local mesg="$(cd "$path" && gem fetch $package -v "$package_ver" 2>&1)"
+  local mesg="$(cd "$path" && gem fetch "$package" -v "$package_ver" 2>&1)"
   [[ "$mesg" != "Downloaded "* ]] && die "$mesg"
 
   # Convert the string to <package name>.gem

@@ -12,47 +12,30 @@ source "$SCRIPT_DIR"/../share/honest/common.sh
 
 extract() {
   set -e
-  # TODO(david942j): check all probably file format,
-  #                  currently known: .whl(zip), .tar.gz
+  local file="$1"
+  case "$file" in
+    *.whl ) wheel "$file" ;;
+    *.tar.gz ) tarball "$file" ;;
+    * ) die "Failed to extract $file" ;;
+  esac
   set +e
 }
 
-main() {
-  # Parse arguments
-  while [[ "$1" != "" ]]; do
-    case "$1" in
-      -h|--help )
-        usage
-        exit 0
-        ;;
-      --version)
-        version
-        exit 0
-        ;;
-      -v)
-        package_ver="$2"
-        shift 2
-        ;;
-      * )
-        # Exit on argument starting with hyphen "-"
-        [[ "$1" == "-"* ]] && die "Unknown argument $1"
-        # Remember the string type arguments in the array
-        args+=("$1")
-        shift
-        ;;
-    esac
-  done
+wheel() {
+  mkdir -p data
+  unzip -qq "$file" -d data
+}
 
-  # Check # of input arguments after parsing the input arguments
-  [[ ${#args[@]} == 0 ]] && usage && exit 0
-  [[ ${#args[@]} < 2 ]] && die "Both <project> and <destination> are required!"
+tarball() {
+  local dir="$(tar --exclude='*/*' -tf "$1")"
+  tar -xzf "$1"
+  mv "$dir" data
+}
+
+main() {
   ! command_exist "pip" && die "Command 'pip' is not installed on your system"
 
-  # Check the format and exit on any failure
-  check_package_format "${args[0]}"
-
-  local package="${args[0]#*:}"
-  local path="${args[1]}"
+  vendor_option_parser "$@"
   local target="$package"
   [[ "$package_ver" != "" ]] && target+="==$package_ver"
 
@@ -68,4 +51,3 @@ main() {
 }
 
 main "$@"
-

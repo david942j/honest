@@ -140,11 +140,58 @@ remove_prefix() {
 # Returns:
 #   0: found, 1: NOT found
 #######################################
-function command_exist() {
+command_exist() {
   command_found=$(command -v "$1" 2> /dev/null)
   if [[ "$command_found" == "" ]]; then
     return 1 # NOT found
   else
     return 0 # Found
   fi
+}
+
+
+#######################################
+# The common option parser for libexec/honest-$vendor
+# Globals:
+#   package, package_ver, path
+# Arguments:
+#   <package> <destination> [-v <version>]
+# Returns:
+#   None
+#######################################
+vendor_option_parser() {
+  # Parse arguments
+  while [[ "$1" != "" ]]; do
+    case "$1" in
+      -h|--help )
+        usage
+        exit 0
+        ;;
+      --version)
+        version
+        exit 0
+        ;;
+      -v)
+        package_ver="$2"
+        shift 2
+        ;;
+      * )
+        # Exit on argument starting with hyphen "-"
+        [[ "$1" == "-"* ]] && die "Unknown argument $1"
+        # Remember the string type arguments in the array
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  # Check # of input arguments after parsing the input arguments
+  [[ ${#args[@]} == 0 ]] && usage && exit 0
+  [[ ${#args[@]} < 2 ]] && die "Both <package> and <destination> are required!"
+
+  # Check the format and exit on any failure
+  check_package_format "${args[0]}"
+
+  package="${args[0]#*:}"
+  path="${args[1]}"
 }
