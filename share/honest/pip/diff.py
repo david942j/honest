@@ -1,6 +1,7 @@
 from __future__ import absolute_import, print_function
 
 import glob
+import os
 import sys
 
 class Diff():
@@ -14,7 +15,11 @@ class Diff():
         self.check_hash()
 
     def check_metadata_files(self):
-        info_path, files_generator = self.get_info_obj()
+        _info_path, files_generator = self.get_info_obj()
+        record = [f for f in files_generator]
+        for f in files_generator:
+            if not os.path.isfile(self.pkg_path + f):
+                print(f)
 
     def check_files_presented(self):
         pass

@@ -7,8 +7,16 @@ branches:
   only:
     - master
 
-before_install:
-  - ruby --version
+matrix:
+  include:
+    - language: ruby
+      ruby: 2.4
+      before_install:
+        - ruby --version
+    - language: python
+      python: 2.7
+      before_install:
+        - python --version
 
 install: git clone --depth 1 https://github.com/sstephenson/bats.git
 
