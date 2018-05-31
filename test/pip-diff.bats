@@ -25,3 +25,9 @@ gen_command() {
   run $RESULT
   [ "$status" -eq 1 ]
 }
+
+@test "$script: sdist" {
+  gen_command git/requests-2.18.3 pip/requests-2.18.3-sdist
+  run $RESULT
+  [ "$status" -eq 0 ]
+}

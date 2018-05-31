@@ -45,32 +45,32 @@ class Diff():
                 exit(1)
 
     def load(self):
-        info_dir, gen = self.get_info_obj()
-        self.record_files = [f for f in gen]
+        info_dir, files = self.get_info_obj()
+        self.record_files = files
         rel = os.path.relpath(info_dir, self.pkg_path)
-        self.normal_files = [f for f in filter(lambda f: not f.startswith(rel), self.record_files)]
+        self.normal_files = [f for f in filter(lambda f: not f.startswith(rel) and f != 'PKG-INFO', self.record_files)]
 
     def get_info_obj(self):
         dist = glob.glob(self.pkg_path + '*.dist-info')
         if dist:
             # wheel
-            return dist[0], self.wheel_filename_generator(dist[0])
+            return dist[0], self.wheel_filenames(dist[0])
         egg = glob.glob(self.pkg_path + '*.egg-info')
         if egg:
             # EGG
-            return egg[0], self.egg_filename_generator(egg[0])
+            return egg[0], self.egg_filenames(egg[0])
         # Fatal
         exit(2)
 
-    def wheel_filename_generator(self, dist_info_dir):
-        for line in open(dist_info_dir + '/RECORD', 'r').readlines():
-            # XXX: What would happen to pip if filename contains ',' ?
-            filename, _sha, _line_count = line.split(',')
-            yield filename
+    def wheel_filenames(self, dist_info_dir):
+        # XXX: What would happen to pip if filename contains ',' ?
+        return [line.split(',')[0] for line in open(os.path.join(dist_info_dir, 'RECORD'), 'r').readlines()]
 
-
-    def egg_filename_generator(self):
-        pass
+    def egg_filenames(self, dist_info_dir):
+        filenames = [line.strip('\n') for line in open(os.path.join(dist_info_dir, 'SOURCES.txt'), 'r').readlines()]
+        # This will not be record into SOURCES.txt
+        filenames.append('PKG-INFO')
+        return filenames
 
     def hash_of(self, filename):
         return hashlib.sha256(open(filename, 'rb').read()).hexdigest()
