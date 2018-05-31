@@ -1,0 +1,12 @@
+LICENSE
+MANIFEST.in
+pytest.ini
+setup.cfg
+setup.py
+requests/__version__.py
+requests.egg-info/PKG-INFO
+requests.egg-info/SOURCES.txt
+requests.egg-info/dependency_links.txt
+requests.egg-info/not-zip-safe
+requests.egg-info/requires.txt
+requests.egg-info/top_level.txt

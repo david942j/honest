@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+#
+# Usage: honest-pip pip:<package> <destination> [-v <version>]
+#        honest-pip pip:requests /tmp/pip -v 39.0.1
+
+# Compatibility to macOS
+[[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
+
+SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
+# Import common functions and variables of honest
+source "$SCRIPT_DIR"/../share/honest/common.sh
+
+extract() {
+  set -e
+  local file="$1"
+  case "$file" in
+    *.whl ) wheel "$file" ;;
+    *.tar.gz ) tarball "$file" ;;
+    * ) die "Failed to extract $file" ;;
+  esac
+  set +e
+}
+
+wheel() {
+  mkdir -p data
+  unzip -qq "$file" -d data
+}
+
+tarball() {
+  local dir="$(tar --exclude='*/*' -tf "$1")"
+  tar -xzf "$1"
+  mv "$dir" data
+}
+
+main() {
+  command_or_die 'pip'
+
+  vendor_option_parser "$@"
+  local target="$package"
+  [[ "$package_ver" != "" ]] && target+="==$package_ver"
+
+  # Download package in the temp directory
+  local mesg=$(cd "$path" && pip download --no-deps -d "$path" "$target" 2>&1)
+  [[ "$mesg" != *"Successfully downloaded "* ]] && die "$mesg"
+
+  # Get the filename.
+  local name=$(echo -e "$mesg" | sed -n -e 's/^.*Saved //p')
+
+  # Go to temp directory and extract the file
+  (cd "$path" && extract "$name")
+}
+
+main "$@"

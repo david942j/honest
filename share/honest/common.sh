@@ -2,7 +2,7 @@
 HONEST_VERSION="0.0.0"
 
 # Currently supported package vendors
-VENDORS=("gem")
+SUPPORTED_VENDORS=(gem pip)
 
 # Set log level to 1 if not set. The number can be 0(any) - 5,
 # representing - debug, info, warn, error, and fatal
@@ -80,7 +80,7 @@ check_package_format() {
   [[ "$1" != *":"* ]] && die "Vendor format error - missing separater ':'"
   ( [[ "$vendor" == "" ]] || [[ "$pkg" == "" ]] ) && die "Vendor format error"
   # Check supported vendors
-  ! in_array "$vendor" "${VENDORS[@]}" && die "Vendor '$vendor' is currently not supported"
+  ! in_array "$vendor" "${SUPPORTED_VENDORS[@]}" && die "Vendor '$vendor' is currently not supported"
 }
 
 #######################################
@@ -140,11 +140,71 @@ remove_prefix() {
 # Returns:
 #   0: found, 1: NOT found
 #######################################
-function command_exist() {
+command_exist() {
   command_found=$(command -v "$1" 2> /dev/null)
   if [[ "$command_found" == "" ]]; then
     return 1 # NOT found
   else
     return 0 # Found
   fi
+}
+
+#######################################
+# Check command's existence and show
+# proper message, then exit.
+# Globals:
+#   None
+# Arguments:
+#   <command>
+# Returns:
+#   None
+#######################################
+command_or_die() {
+  ! command_exist "$1" && die "Command '$1' is not installed on your system"
+}
+
+#######################################
+# The common option parser for libexec/honest-$vendor
+# Globals:
+#   package, package_ver, path
+# Arguments:
+#   <package> <destination> [-v <version>]
+# Returns:
+#   None
+#######################################
+vendor_option_parser() {
+  # Parse arguments
+  while [[ "$1" != "" ]]; do
+    case "$1" in
+      -h|--help )
+        usage
+        exit 0
+        ;;
+      --version)
+        version
+        exit 0
+        ;;
+      -v)
+        package_ver="$2"
+        shift 2
+        ;;
+      * )
+        # Exit on argument starting with hyphen "-"
+        [[ "$1" == "-"* ]] && die "Unknown argument $1"
+        # Remember the string type arguments in the array
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  # Check # of input arguments after parsing the input arguments
+  [[ ${#args[@]} == 0 ]] && usage && exit 0
+  [[ ${#args[@]} < 2 ]] && die "Both <package> and <destination> are required!"
+
+  # Check the format and exit on any failure
+  check_package_format "${args[0]}"
+
+  package="${args[0]#*:}"
+  path="${args[1]}"
 }

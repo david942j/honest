@@ -3,12 +3,12 @@
 # Usage: honest-git <repo> <destination> [-v <version>]
 #        honest-git github:david942j/honest /tmp/repo -v master
 
-# Compatibility to MAC
+# Compatibility to macOS
 [[ "$OSTYPE" == "darwin"* ]] && readlink() { echo $(cd $(dirname "$2") && pwd)/$(basename "$2"); }
 
 SCRIPT_DIR="$(readlink -f "$(dirname "$0")")"
 # Import common functions and variables of honest
-source "$SCRIPT_DIR"/../share/honest/honest-common.sh
+source "$SCRIPT_DIR"/../share/honest/common.sh
 
 REPO_VENDORS=("github" "bitbucket" "gitlab")
 REPO_VENDORS_HOST=("github.com" "bitbucket.org" "gitlab.com")
