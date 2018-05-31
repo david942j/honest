@@ -4,10 +4,14 @@ import glob
 import os
 import sys
 
+class UnhonestError(Exception):
+    pass
+
 class Diff():
     def __init__(self, repo_path, pkg_path):
         self.repo_path = repo_path
         self.pkg_path = pkg_path + '/data/'
+        self.load()
 
     def run(self):
         self.check_metadata_files()
@@ -15,17 +19,27 @@ class Diff():
         self.check_hash()
 
     def check_metadata_files(self):
-        _info_path, files_generator = self.get_info_obj()
-        record = [f for f in files_generator]
-        for f in files_generator:
-            if not os.path.isfile(self.pkg_path + f):
-                print(f)
+        record = self.record_files
+        presented = []
+        for root, dirnames, filenames in os.walk(self.pkg_path):
+            for filename in filenames:
+                presented.append(os.path.relpath(os.path.join(root, filename), self.pkg_path))
+        extra = [x for x in presented if x not in record]
+        missing = [x for x in record if x not in presented]
+        if any(extra):
+            self.unhonest('Extra files in package: {}.', extra)
+        if any(missing):
+            self.unhonest('Missing files in package: {}.', missing)
 
     def check_files_presented(self):
         pass
 
     def check_hash(self):
         pass
+
+    def load(self):
+        _, gen = self.get_info_obj()
+        self.record_files = [ f for f in gen]
 
     def get_info_obj(self):
         dist = glob.glob(self.pkg_path + '*.dist-info')
@@ -49,7 +63,15 @@ class Diff():
     def egg_filename_generator(self):
         pass
 
+    def unhonest(self, fmt, ary):
+        raise UnhonestError(fmt.format(', '.join(map(repr, ary))))
+
 if __name__ == '__main__':
     if len(sys.argv) != 3:
         exit(1)
-    Diff(sys.argv[1], sys.argv[2]).run()
+    try:
+        Diff(sys.argv[1], sys.argv[2]).run()
+    except UnhonestError as err:
+        print('Unhonest! {}'.format(err))
+        exit(1)
+
