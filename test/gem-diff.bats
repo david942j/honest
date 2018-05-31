@@ -10,7 +10,7 @@ gen_command() {
   gen_command dont_care gem/corrupted_metadata
   run $RESULT
   [ "$status" -eq 1 ]
-  [ "$output" = "Unhonest! Extra files in package: \"file.hack\"." ]
+  [ "$output" = "Extra files in package: \"file.hack\"." ]
 }
 
 @test "$script: gdb-ruby" {

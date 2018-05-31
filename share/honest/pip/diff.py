@@ -1,6 +1,7 @@
 from __future__ import absolute_import, print_function
 
 import glob
+import hashlib
 import os
 import sys
 
@@ -8,38 +9,46 @@ class UnhonestError(Exception):
     pass
 
 class Diff():
-    def __init__(self, repo_path, pkg_path):
-        self.repo_path = repo_path
+    def __init__(self, source_path, pkg_path):
+        self.source_path = source_path
         self.pkg_path = pkg_path + '/data/'
         self.load()
 
     def run(self):
         self.check_metadata_files()
-        self.check_files_presented()
+        self.check_files_present()
         self.check_hash()
 
     def check_metadata_files(self):
         record = self.record_files
-        presented = []
+        present = []
         for root, dirnames, filenames in os.walk(self.pkg_path):
             for filename in filenames:
-                presented.append(os.path.relpath(os.path.join(root, filename), self.pkg_path))
-        extra = [x for x in presented if x not in record]
-        missing = [x for x in record if x not in presented]
+                present.append(os.path.relpath(os.path.join(root, filename), self.pkg_path))
+        extra = [x for x in present if x not in record]
+        missing = [x for x in record if x not in present]
         if any(extra):
             self.unhonest('Extra files in package: {}.', extra)
         if any(missing):
             self.unhonest('Missing files in package: {}.', missing)
 
-    def check_files_presented(self):
-        pass
+    def check_files_present(self):
+        missing = [f for f in filter(lambda f: not os.path.isfile(os.path.join(self.source_path, f)), self.normal_files)]
+        if any(missing):
+            self.unhonest('Files in package but not in source: {}.', missing)
 
     def check_hash(self):
-        pass
+        for f in self.normal_files:
+            source = self.hash_of(os.path.join(self.source_path, f))
+            pkg = self.hash_of(os.path.join(self.pkg_path, f))
+            if source != pkg:
+                exit(1)
 
     def load(self):
-        _, gen = self.get_info_obj()
-        self.record_files = [ f for f in gen]
+        info_dir, gen = self.get_info_obj()
+        self.record_files = [f for f in gen]
+        rel = os.path.relpath(info_dir, self.pkg_path)
+        self.normal_files = [f for f in filter(lambda f: not f.startswith(rel), self.record_files)]
 
     def get_info_obj(self):
         dist = glob.glob(self.pkg_path + '*.dist-info')
@@ -63,6 +72,9 @@ class Diff():
     def egg_filename_generator(self):
         pass
 
+    def hash_of(self, filename):
+        return hashlib.sha256(open(filename, 'rb').read()).hexdigest()
+
     def unhonest(self, fmt, ary):
         raise UnhonestError(fmt.format(', '.join(map(repr, ary))))
 
@@ -72,6 +84,5 @@ if __name__ == '__main__':
     try:
         Diff(sys.argv[1], sys.argv[2]).run()
     except UnhonestError as err:
-        print('Unhonest! {}'.format(err))
+        print('{}'.format(err), file=sys.stderr)
         exit(1)
-

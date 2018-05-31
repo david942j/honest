@@ -51,14 +51,12 @@ class Diff
 
   def check_hash
     # metadata has been checked
-    different = []
     @spec.files.each do |f|
       source = hash_of(File.join(@source_path, f))
       pkg = hash_of(File.join(@pkg_path, 'data', f))
-      different << f if source != pkg
+      # Let git-diff show it
+      exit 1 if source != pkg
     end
-    # TODO: gen reports
-    exit 1 if different.any?
   end
 
   def hash_of(file)
@@ -76,6 +74,6 @@ begin
   Diff.new(*ARGV).run
 rescue HonestError => e
   # TODO: gen reports
-  warn('Unhonest! ' + e.message)
+  warn(e.message)
   exit 1
 end

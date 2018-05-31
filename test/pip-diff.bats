@@ -11,11 +11,17 @@ gen_command() {
   gen_command dont_care pip/corrupted_record
   run $RESULT
   [ "$status" -eq 1 ]
-  [ "$output" = "Unhonest! Missing files in package: 'fake_pkg/api.py'." ]
+  [ "$output" = "Missing files in package: 'fake_pkg/api.py'." ]
 }
 
 @test "$script: requests-2.18.3" {
   gen_command git/requests-2.18.3 pip/requests-2.18.3
   run $RESULT
   [ "$status" -eq 0 ]
+}
+
+@test "$script: injected" {
+  gen_command git/requests-2.18.3 pip/modified
+  run $RESULT
+  [ "$status" -eq 1 ]
 }
