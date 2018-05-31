@@ -33,7 +33,7 @@ tarball() {
 }
 
 main() {
-  ! command_exist "pip" && die "Command 'pip' is not installed on your system"
+  command_or_die 'pip'
 
   vendor_option_parser "$@"
   local target="$package"

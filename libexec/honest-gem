@@ -24,7 +24,7 @@ extract() {
 }
 
 main() {
-  ! command_exist "gem" && die "Command 'gem' is not installed on your system"
+  command_or_die 'gem'
 
   vendor_option_parser "$@"
   # Download package in the temp directory

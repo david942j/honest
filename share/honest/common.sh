@@ -149,6 +149,19 @@ command_exist() {
   fi
 }
 
+#######################################
+# Check command's existence and show
+# proper message, then exit.
+# Globals:
+#   None
+# Arguments:
+#   <command>
+# Returns:
+#   None
+#######################################
+command_or_die() {
+  ! command_exist "$1" && die "Command '$1' is not installed on your system"
+}
 
 #######################################
 # The common option parser for libexec/honest-$vendor
