@@ -43,6 +43,12 @@ honest github:bbatsov/rubocop gem:rubocop -v 0.55.0
 # [INFO] OK, rubocop is Honest!
 ```
 
+Compare with a local directory:
+```bash
+$ honest ./httpie pip:httpie -v 0.9.8
+# [INFO] OK, httpie is Honest!
+```
+
 
 #### See help for more details
 
@@ -50,8 +56,7 @@ honest github:bbatsov/rubocop gem:rubocop -v 0.55.0
 $ honest
 # Honest version 0.0.0
 # Usage: honest [-h/--help] [--version]
-#               <git-url>
-#               <package> [-v version[:version]]
+#               <git-url> <package> [-v version[:version]]
 #
 # Examples:
 #        honest --version
@@ -80,7 +85,9 @@ $ honest
 
 ![honest gem](https://github.com/david942j/honest/blob/master/screenshots/rubocop.png?raw=true)
 
+![honest pip](https://github.com/david942j/honest/blob/master/screenshots/setuptools.png?raw=true)
+
 ## Supported Package Manager
 
 - [x] RubyGems (Ruby)
-- [ ] PyPi (Python)
+- [x] PyPi (Python)
