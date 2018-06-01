@@ -1,5 +1,5 @@
 ###
-HONEST_VERSION="0.0.0"
+HONEST_VERSION="1.0.0"
 
 # Currently supported package vendors
 SUPPORTED_VENDORS=(gem pip)

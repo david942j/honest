@@ -54,7 +54,7 @@ $ honest ./httpie pip:httpie -v 0.9.8
 
 ```bash
 $ honest
-# Honest version 0.0.0
+# Honest version 1.0.0
 # Usage: honest [-h/--help] [--version]
 #               <git-url> <package> [-v version[:version]]
 #
